@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -22,16 +22,19 @@ function LoginPage() {
 
   const handleGoogle = async () => {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/painel",
+    const result = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/painel",
+      },
     });
     if (result.error) {
       toast.error("Não foi possível entrar. Tente novamente.");
       setBusy(false);
       return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/painel" });
+    // Supabase OAuth redireciona o navegador automaticamente
+
   };
 
   return (
