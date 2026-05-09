@@ -33,8 +33,8 @@ function LoginPage() {
       setBusy(false);
       return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/painel" });
+    // Supabase OAuth redireciona o navegador automaticamente
+
   };
 
   return (
