@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { ArrowRight, Compass, Sparkles, BookOpen, ClipboardList, Users, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
+import { useAuth } from "@/hooks/use-auth";
 import heroImg from "@/assets/hero-gps.jpg";
 
 export const Route = createFileRoute("/")({
@@ -15,6 +17,14 @@ const features = [
 ];
 
 function LandingPage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If Supabase fell back to Site URL after OAuth, send authenticated users to /painel.
+    if (!loading && user) navigate({ to: "/painel", replace: true });
+  }, [user, loading, navigate]);
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
