@@ -17,23 +17,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let initialSessionResolved = false;
+    let latestSession: Session | null = null;
+
+    const applySession = (nextSession: Session | null) => {
+      latestSession = nextSession;
+      setSession(nextSession);
+    };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (!mounted) return;
-      if (event === "INITIAL_SESSION" && !s) return;
+      applySession(s);
 
-      setSession(s);
-
-      if (event !== "INITIAL_SESSION" || initialSessionResolved || s) {
+      if (s) {
         setLoading(false);
       }
     });
 
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      initialSessionResolved = true;
-      setSession(data.session);
+      applySession(data.session ?? latestSession);
+      setLoading(false);
+    }).catch((error) => {
+      console.error("Erro ao hidratar sessão", error);
+      if (!mounted) return;
+      applySession(latestSession);
       setLoading(false);
     });
 
@@ -42,6 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    console.log("session", session);
+    console.log("user", session?.user ?? null);
+    console.log("loading", loading);
+  }, [session, loading]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
