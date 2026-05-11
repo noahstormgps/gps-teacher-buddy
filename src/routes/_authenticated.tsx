@@ -1,42 +1,36 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader } from "@/components/site-header";
 import { Compass } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
 });
 
 function AuthLayout() {
-  const { user, session, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const checkedAfterHydration = useRef(false);
 
   useEffect(() => {
-    if (loading || user || checkedAfterHydration.current) return;
+    // Só redireciona APÓS o loading terminar e confirmar que não há usuário
+    if (!loading && !user) {
+      navigate({ to: "/login", replace: true });
+    }
+  }, [loading, user, navigate]);
 
-    checkedAfterHydration.current = true;
-    let cancelled = false;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled && !data.session) navigate({ to: "/login", replace: true });
-    }).catch(() => {
-      if (!cancelled) navigate({ to: "/login", replace: true });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, loading, navigate]);
-
-  if (loading || (!user && !session)) {
+  // Enquanto carrega, mostra spinner
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Compass className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Se não há usuário após loading, não renderiza nada (o useEffect vai redirecionar)
+  if (!user) {
+    return null;
   }
 
   return (
