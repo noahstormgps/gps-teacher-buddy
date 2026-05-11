@@ -15,9 +15,32 @@ function LoginPage() {
   const { user, session, loading } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [checkingStoredSession, setCheckingStoredSession] = useState(true);
 
   useEffect(() => {
     if (!loading && (user || session)) navigate({ to: "/painel", replace: true });
+  }, [user, session, loading, navigate]);
+
+  useEffect(() => {
+    if (loading || user || session) return;
+
+    let cancelled = false;
+    setCheckingStoredSession(true);
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) {
+        navigate({ to: "/painel", replace: true });
+        return;
+      }
+      setCheckingStoredSession(false);
+    }).catch(() => {
+      if (!cancelled) setCheckingStoredSession(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, session, loading, navigate]);
 
   const handleGoogle = async () => {
@@ -37,7 +60,7 @@ function LoginPage() {
     }
   };
 
-  if (loading || user || session) {
+  if (loading || checkingStoredSession || user || session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Compass className="h-8 w-8 animate-spin text-primary" />
