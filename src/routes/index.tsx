@@ -17,13 +17,13 @@ const features = [
 ];
 
 function LandingPage() {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // If Supabase fell back to Site URL after OAuth, send authenticated users to /painel.
-    if (!loading && user) navigate({ to: "/painel", replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && (user || session)) navigate({ to: "/painel", replace: true });
+  }, [user, session, loading, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
