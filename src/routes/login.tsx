@@ -12,13 +12,13 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/painel" });
-  }, [user, loading, navigate]);
+    if (!loading && (user || session)) navigate({ to: "/painel", replace: true });
+  }, [user, session, loading, navigate]);
 
   const handleGoogle = async () => {
     setBusy(true);
@@ -36,6 +36,14 @@ function LoginPage() {
       setBusy(false);
     }
   };
+
+  if (loading || user || session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Compass className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
