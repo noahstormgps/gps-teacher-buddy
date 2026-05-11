@@ -18,10 +18,18 @@ function AuthCallback() {
       if (!cancelled) navigate({ to: path, replace: true });
     };
 
-    // supabase-js (detectSessionInUrl=true) parses the hash automatically.
-    // Wait for the session to be available, then redirect.
     const check = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (!error && data.session) return go("/painel");
+      }
+
       const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
       if (data.session) return go("/painel");
 
       const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -31,7 +39,7 @@ function AuthCallback() {
         }
       });
 
-      // Safety fallback: if nothing arrives in 5s, go to login.
+      // Safety fallback: give storage hydration enough time before declaring unauthenticated.
       setTimeout(() => {
         if (!cancelled) {
           supabase.auth.getSession().then(({ data }) => {
@@ -40,7 +48,7 @@ function AuthCallback() {
             go(data.session ? "/painel" : "/login");
           });
         }
-      }, 5000);
+      }, 8000);
     };
 
     check();
