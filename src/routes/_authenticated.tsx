@@ -22,6 +22,8 @@ function AuthLayout() {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!cancelled && !data.session) navigate({ to: "/login", replace: true });
+    }).catch(() => {
+      if (!cancelled) navigate({ to: "/login", replace: true });
     });
 
     return () => {
