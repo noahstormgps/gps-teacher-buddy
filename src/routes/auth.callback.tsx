@@ -18,40 +18,51 @@ function AuthCallback() {
       if (!cancelled) navigate({ to: path, replace: true });
     };
 
-    const check = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
+    const run = async () => {
+      try {
+        const search = new URLSearchParams(window.location.search);
+        const code = search.get("code");
 
-      if (code) {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        if (cancelled) return;
-        if (!error && data.session) return go("/painel");
-      }
-
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (data.session) return go("/painel");
-
-      const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-        if (session) {
-          sub.subscription.unsubscribe();
-          go("/painel");
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (cancelled) return;
+          if (!error && data.session) {
+            window.history.replaceState({}, document.title, "/auth/callback");
+            return go("/painel");
+          }
         }
-      });
 
-      // Safety fallback: give storage hydration enough time before declaring unauthenticated.
-      setTimeout(() => {
-        if (!cancelled) {
-          supabase.auth.getSession().then(({ data }) => {
-            if (cancelled) return;
-            sub.subscription.unsubscribe();
-            go(data.session ? "/painel" : "/login");
+        const hash = window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : window.location.hash;
+        const hashParams = new URLSearchParams(hash);
+        const access_token = hashParams.get("access_token");
+        const refresh_token = hashParams.get("refresh_token");
+
+        if (access_token && refresh_token) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
           });
+          if (cancelled) return;
+          if (!error && data.session) {
+            window.history.replaceState({}, document.title, "/auth/callback");
+            return go("/painel");
+          }
         }
-      }, 8000);
+
+        const { data } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (data.session) return go("/painel");
+
+        go("/login");
+      } catch (err) {
+        console.error("[auth/callback] error", err);
+        if (!cancelled) go("/login");
+      }
     };
 
-    check();
+    run();
     return () => {
       cancelled = true;
     };
