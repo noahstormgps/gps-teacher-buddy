@@ -18,30 +18,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let latestSession: Session | null = null;
 
-    const applySession = (nextSession: Session | null) => {
-      latestSession = nextSession;
-      setSession(nextSession);
-    };
-
+    // Subscribe to auth state changes FIRST (before getSession)
+    // This ensures we capture the SIGNED_IN event fired after exchangeCodeForSession
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (!mounted) return;
-      applySession(s);
-
-      if (s) {
-        setLoading(false);
-      }
+      console.log("[useAuth] onAuthStateChange:", event, s ? "session OK" : "no session");
+      setSession(s);
+      // Always stop loading on any auth event
+      setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data }) => {
+    // Then hydrate from localStorage (synchronous read via getSession)
+    supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
-      applySession(data.session ?? latestSession);
+      if (error) {
+        console.error("[useAuth] getSession error:", error.message);
+      }
+      console.log("[useAuth] getSession:", data.session ? "session OK" : "no session");
+      setSession(data.session ?? null);
       setLoading(false);
     }).catch((error) => {
-      console.error("Erro ao hidratar sessão", error);
+      console.error("[useAuth] getSession unexpected error:", error);
       if (!mounted) return;
-      applySession(latestSession);
       setLoading(false);
     });
 
@@ -50,12 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    console.log("session", session);
-    console.log("user", user);
-    console.log("loading", loading);
-  }, [session, user, loading]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
