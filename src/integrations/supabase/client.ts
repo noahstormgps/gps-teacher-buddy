@@ -23,7 +23,6 @@ function createSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       storage: window.localStorage,
-      flowType: 'implicit',
     }
   });
 }

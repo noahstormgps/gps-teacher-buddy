@@ -20,35 +20,17 @@ function AuthCallback() {
 
     const run = async () => {
       try {
-        const search = new URLSearchParams(window.location.search);
-        const code = search.get("code");
-
-        // PKCE flow: exchange authorization code for session
-        if (code) {
-          console.log("[auth/callback] PKCE code found, exchanging for session...");
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (cancelled) return;
-          if (error) {
-            console.error("[auth/callback] exchangeCodeForSession error:", error.message);
-          }
-          if (!error && data.session) {
-            console.log("[auth/callback] Session established via PKCE, redirecting to /painel");
-            // Clean the URL before navigating
-            window.history.replaceState({}, document.title, "/auth/callback");
-            return go("/painel");
-          }
-        }
-
-        // Implicit flow fallback: tokens in URL hash
+        // Magic link delivers tokens via URL hash (#access_token=...&refresh_token=...)
+        // detectSessionInUrl is disabled; we handle it manually here for reliability
         const hash = window.location.hash.startsWith("#")
           ? window.location.hash.slice(1)
-          : window.location.hash;
+          : "";
         const hashParams = new URLSearchParams(hash);
         const access_token = hashParams.get("access_token");
         const refresh_token = hashParams.get("refresh_token");
 
         if (access_token && refresh_token) {
-          console.log("[auth/callback] Implicit tokens found in hash, setting session...");
+          console.log("[auth/callback] Magic link tokens found, setting session...");
           const { data, error } = await supabase.auth.setSession({
             access_token,
             refresh_token,
@@ -56,16 +38,17 @@ function AuthCallback() {
           if (cancelled) return;
           if (error) {
             console.error("[auth/callback] setSession error:", error.message);
+            return go("/login");
           }
-          if (!error && data.session) {
-            console.log("[auth/callback] Session established via implicit flow, redirecting to /painel");
+          if (data.session) {
+            console.log("[auth/callback] Session established, redirecting to /painel");
             window.history.replaceState({}, document.title, "/auth/callback");
             return go("/painel");
           }
         }
 
-        // Last resort: check if session already exists (e.g., detectSessionInUrl handled it)
-        console.log("[auth/callback] Checking existing session...");
+        // Fallback: check if session already exists in storage
+        console.log("[auth/callback] No tokens in hash, checking existing session...");
         const { data } = await supabase.auth.getSession();
         if (cancelled) return;
         if (data.session) {
@@ -73,7 +56,6 @@ function AuthCallback() {
           return go("/painel");
         }
 
-        // No session found — redirect to login
         console.warn("[auth/callback] No session found, redirecting to /login");
         go("/login");
       } catch (err) {
