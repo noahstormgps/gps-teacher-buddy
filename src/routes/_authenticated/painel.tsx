@@ -33,7 +33,8 @@ function DashboardPage() {
   });
 
   const isPremium = subscription?.plan === "premium" && subscription?.status === "active";
-  const firstName = (profile?.full_name ?? user?.email ?? "").split(" ")[0];
+  const rawName = profile?.full_name ?? (user?.email ? user.email.split("@")[0] : "");
+  const firstName = rawName.split(" ")[0];
 
   const quickTools = [
     { icon: ClipboardList, title: "Plano de aula", desc: "Gere planos com IA pedagógica.", href: "/ferramentas" as const },
