@@ -7,7 +7,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 const externalSupabaseUrl = "https://mnmcotadxfjmknpifknt.supabase.co";
-const externalSupabasePublishableKey = "sb_publishable_PmOzDSO2WTJHoUB45MHS_g_wdljlEdD";
+const externalSupabasePublishableKey = "sb_publishable_PmOzDSO2WTJHoUB45MHS_g_wdIjLEdD";
 const externalSupabaseProjectId = "mnmcotadxfjmknpifknt";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
