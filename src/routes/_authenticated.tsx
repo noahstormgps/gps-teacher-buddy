@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { SiteHeader } from "@/components/site-header";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Compass } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -34,9 +34,13 @@ function AuthLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <Outlet />
+    <div className="flex min-h-screen bg-background">
+      {/* Sidebar autoral */}
+      <AppSidebar />
+      {/* Conteúdo principal */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <Outlet />
+      </main>
     </div>
   );
 }
