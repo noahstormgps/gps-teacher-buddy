@@ -82,7 +82,7 @@ function DashboardPage() {
   const firstName = rawName.split(" ")[0];
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
+    <main className="bg-authenticated-premium min-h-screen mx-auto max-w-6xl px-6 pt-16 pb-12 md:pt-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Olá novamente,</p>
@@ -113,7 +113,7 @@ function DashboardPage() {
               </div>
               <h2 className="mt-3 font-display text-2xl font-semibold">Atualize para o Premium</h2>
               <p className="mt-2 text-sm text-primary-foreground/80">
-                Acesso ilimitado a todas as ferramentas, IA pedagógica e atualizações exclusivas.
+                Acesse os métodos do GPS Docente sem limites e acompanhe as próximas liberações.
               </p>
             </div>
             <Button asChild size="lg" variant="secondary" className="shadow-premium">
@@ -128,12 +128,12 @@ function DashboardPage() {
       {/* Acesso rápido — métodos oficiais */}
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">Acesso rápido</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           {quickTools.map((t) =>
             t.comingSoon ? (
               <div
                 key={t.label}
-                className={`relative rounded-2xl border bg-muted/40 p-6 opacity-60 cursor-not-allowed select-none ${t.borderColor}`}
+                className={`relative rounded-2xl border bg-muted/30 p-6 opacity-70 cursor-not-allowed select-none ${t.borderColor}`}
               >
                 <div className="flex items-start justify-between">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${t.iconBg}`}>
@@ -151,7 +151,7 @@ function DashboardPage() {
               <Link
                 key={t.label}
                 to={t.href!}
-                className={`group rounded-2xl border bg-gradient-card p-6 transition-all hover:shadow-elegant hover:-translate-y-0.5 ${t.borderColor}`}
+                className={`group rounded-2xl border-2 bg-gradient-card p-6 transition-all hover:shadow-elegant hover:-translate-y-0.5 ${t.borderColor}`}
               >
                 <div className="flex items-start justify-between">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${t.iconBg}`}>

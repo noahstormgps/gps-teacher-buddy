@@ -86,7 +86,7 @@ function ToolsPage() {
   const isPremium = subscription?.plan === "premium" && subscription?.status === "active";
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
+    <main className="bg-authenticated-premium min-h-screen mx-auto max-w-6xl px-6 pt-16 pb-12 md:pt-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl font-semibold tracking-tight">Biblioteca de ferramentas</h1>
@@ -99,18 +99,18 @@ function ToolsPage() {
         )}
       </div>
 
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-2">
+      <div className="mt-10 grid gap-5 grid-cols-1 sm:grid-cols-2">
         {methods.map((m) =>
           m.comingSoon ? (
             <div
               key={m.label}
-              className={`relative rounded-2xl border bg-muted/40 p-6 opacity-60 cursor-not-allowed select-none ${m.borderSoon}`}
+              className={`relative rounded-2xl border bg-muted/30 p-6 opacity-70 cursor-not-allowed select-none ${m.borderSoon}`}
             >
               <div className="flex items-start justify-between">
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${m.iconBg}`}>
                   <m.icon className="h-5 w-5" />
                 </div>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="rounded-full border border-border bg-muted/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Em breve
                 </span>
               </div>
@@ -122,7 +122,7 @@ function ToolsPage() {
             <div
               key={m.label}
               onClick={() => navigate({ to: m.route! })}
-              className={`group relative overflow-hidden rounded-2xl border bg-gradient-card p-6 transition-all hover:shadow-elegant hover:-translate-y-0.5 cursor-pointer ${m.borderAvailable}`}
+              className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-card p-6 transition-all hover:shadow-elegant hover:-translate-y-0.5 cursor-pointer ${m.borderAvailable}`}
             >
               <div className="flex items-start justify-between">
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${m.iconBg}`}>

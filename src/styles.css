@@ -134,4 +134,11 @@
     background-clip: text;
     color: transparent;
   }
+  /* Fundo premium sutil para área autenticada — gradiente radial quase imperceptível */
+  .bg-authenticated-premium {
+    background:
+      radial-gradient(ellipse at 15% 0%, oklch(0.55 0.18 265 / 0.035) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 100%, oklch(0.78 0.14 75 / 0.025) 0%, transparent 50%),
+      var(--background);
+  }
 }
