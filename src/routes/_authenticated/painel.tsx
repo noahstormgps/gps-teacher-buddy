@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Crown, Sparkles, ArrowRight, BookOpen, ClipboardList, Wand2 } from "lucide-react";
+import { Crown, Sparkles, ArrowRight, BookOpen, Shield, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -10,6 +10,51 @@ export const Route = createFileRoute("/_authenticated/painel")({
   component: DashboardPage,
   head: () => ({ meta: [{ title: "Painel — GPS Docente Premium" }] }),
 });
+
+type QuickTool = {
+  icon: typeof BookOpen;
+  label: string;
+  sublabel: string;
+  desc: string;
+  color: string;
+  iconBg: string;
+  borderColor: string;
+  href?: string;
+  comingSoon?: boolean;
+};
+
+const quickTools: QuickTool[] = [
+  {
+    icon: BookOpen,
+    label: "C.O.N.T.A.",
+    sublabel: "Planos de Aula",
+    desc: "Gere planos completos alinhados à BNCC, CRMG, PBH ou EJA.",
+    color: "text-emerald-600",
+    iconBg: "bg-emerald-50 text-emerald-600",
+    borderColor: "border-emerald-200 hover:border-emerald-400",
+    href: "/ferramentas/conta",
+  },
+  {
+    icon: Shield,
+    label: "S.A.L.A.",
+    sublabel: "Gestão de Conflitos",
+    desc: "Protocolos de sondagem, antecipação e ação para situações reais.",
+    color: "text-blue-600",
+    iconBg: "bg-blue-50 text-blue-600",
+    borderColor: "border-blue-200/60",
+    comingSoon: true,
+  },
+  {
+    icon: FileText,
+    label: "R.A.P.I.D.O.",
+    sublabel: "Documentos Profissionais",
+    desc: "Transforme anotações em relatórios, atas, pareceres e documentos escolares.",
+    color: "text-amber-600",
+    iconBg: "bg-amber-50 text-amber-600",
+    borderColor: "border-amber-200/60",
+    comingSoon: true,
+  },
+];
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -35,12 +80,6 @@ function DashboardPage() {
   const isPremium = subscription?.plan === "premium" && subscription?.status === "active";
   const rawName = profile?.full_name ?? (user?.email ? user.email.split("@")[0] : "");
   const firstName = rawName.split(" ")[0];
-
-  const quickTools = [
-    { icon: ClipboardList, title: "Plano de aula", desc: "Gere planos com IA pedagógica.", href: "/ferramentas" as const },
-    { icon: Wand2, title: "Gerador de questões", desc: "Provas e exercícios personalizados.", href: "/ferramentas" as const },
-    { icon: BookOpen, title: "Sequência didática", desc: "Estruture suas unidades.", href: "/ferramentas" as const },
-  ];
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
@@ -86,26 +125,51 @@ function DashboardPage() {
         </div>
       )}
 
-      {/* Quick tools */}
+      {/* Acesso rápido — métodos oficiais */}
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">Acesso rápido</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {quickTools.map((t) => (
-            <Link
-              key={t.title}
-              to={t.href}
-              className="group rounded-2xl border border-border bg-gradient-card p-6 transition-all hover:shadow-elegant hover:-translate-y-0.5"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <t.icon className="h-5 w-5" />
+          {quickTools.map((t) =>
+            t.comingSoon ? (
+              <div
+                key={t.label}
+                className={`relative rounded-2xl border bg-muted/40 p-6 opacity-60 cursor-not-allowed select-none ${t.borderColor}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${t.iconBg}`}>
+                    <t.icon className="h-5 w-5" />
+                  </div>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Em breve
+                  </span>
+                </div>
+                <p className={`mt-4 text-xs font-semibold uppercase tracking-widest ${t.color}`}>{t.sublabel}</p>
+                <h3 className="mt-0.5 font-display text-lg font-semibold">{t.label}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t.desc}</p>
               </div>
-              <h3 className="mt-4 font-display text-lg font-semibold">{t.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{t.desc}</p>
-              <div className="mt-4 inline-flex items-center text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                Abrir <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </div>
-            </Link>
-          ))}
+            ) : (
+              <Link
+                key={t.label}
+                to={t.href!}
+                className={`group rounded-2xl border bg-gradient-card p-6 transition-all hover:shadow-elegant hover:-translate-y-0.5 ${t.borderColor}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${t.iconBg}`}>
+                    <t.icon className="h-5 w-5" />
+                  </div>
+                  <Badge variant="outline" className="border-emerald-400/40 bg-emerald-50 text-emerald-700 text-xs">
+                    Disponível
+                  </Badge>
+                </div>
+                <p className={`mt-4 text-xs font-semibold uppercase tracking-widest ${t.color}`}>{t.sublabel}</p>
+                <h3 className="mt-0.5 font-display text-lg font-semibold">{t.label}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t.desc}</p>
+                <div className={`mt-4 inline-flex items-center text-sm font-medium ${t.color} opacity-0 transition-opacity group-hover:opacity-100`}>
+                  Acessar <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </div>
+              </Link>
+            )
+          )}
         </div>
       </section>
 
