@@ -17,7 +17,7 @@ import {
   ArrowLeft, ClipboardList, Loader2, Copy, Check, AlertCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/ferramentas/conta")({
+export const Route = createFileRoute("/_authenticated/conta")({
   component: ContaPage,
   head: () => ({ meta: [{ title: "C.O.N.T.A. — Plano de Aula Inteligente | GPS Docente Premium" }] }),
 });

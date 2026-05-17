@@ -32,7 +32,7 @@ const quickTools: QuickTool[] = [
     color: "text-emerald-600",
     iconBg: "bg-emerald-50 text-emerald-600",
     borderColor: "border-emerald-200 hover:border-emerald-400",
-    href: "/ferramentas/conta",
+    href: "/conta",
   },
   {
     icon: Shield,

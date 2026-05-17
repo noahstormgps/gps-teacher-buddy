@@ -34,7 +34,7 @@ const methods: Method[] = [
     iconBg: "bg-emerald-50 text-emerald-600",
     borderAvailable: "border-emerald-200 hover:border-emerald-400",
     borderSoon: "border-emerald-200/40",
-    route: "/ferramentas/conta",
+    route: "/conta",
   },
   {
     icon: Shield,

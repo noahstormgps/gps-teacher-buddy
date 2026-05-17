@@ -31,7 +31,7 @@ const NAV_ITEMS = [
   {
     label: "C.O.N.T.A.",
     sublabel: "Planos de Aula",
-    href: "/ferramentas/conta",
+    href: "/conta",
     icon: BookOpen,
     color: "text-emerald-600",
     activeBg: "bg-emerald-50",
