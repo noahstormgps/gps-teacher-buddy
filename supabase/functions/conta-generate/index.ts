@@ -287,8 +287,9 @@ Deno.serve(async (req) => {
       desafios,
       objetivoExtra,
       baseCurricular = "BNCC",
-      nivelEJA = "EF",
+      nivelEJA = "EJA_EF",
       cidadeEstado,
+      perfilTurma,
     } = input;
 
     // Validações básicas
@@ -302,7 +303,7 @@ Deno.serve(async (req) => {
     // Determinar a chave interna da base
     let baseKey: string = baseCurricular;
     if (baseCurricular === "PBH_EJA") {
-      baseKey = nivelEJA === "EM" ? "PBH_EJA_EM" : "PBH_EJA_EF";
+      baseKey = (nivelEJA === "EJA_EM" || nivelEJA === "EM") ? "PBH_EJA_EM" : "PBH_EJA_EF";
     }
 
     const baseCurricularLabel = baseCurricularLabels[baseKey] ?? baseCurricularLabels["BNCC"];
@@ -342,7 +343,7 @@ Deno.serve(async (req) => {
 **Série/Ano:** ${serie}
 **Tema:** ${tema}
 ${duracaoBloco}
-**Recursos disponíveis:** ${recursosStr}${desafios ? `\n**Desafios da turma:** ${desafios}` : ""}${objetivoExtra ? `\n**Objetivo adicional:** ${objetivoExtra}` : ""}${baseCurricular === "BNCC" && cidadeEstado ? `\n**Contexto regional:** ${cidadeEstado}` : ""}${instrucaoOrganizacao}
+**Recursos disponíveis:** ${recursosStr}${perfilTurma ? `\n**Perfil da turma / realidade concreta:** ${perfilTurma}. Use essa informação para adaptar o plano à realidade da turma, considerando ritmo, dificuldades, participação, recursos disponíveis, condições materiais e nível de apoio necessário.` : ""}${desafios ? `\n**Desafios da turma:** ${desafios}` : ""}${objetivoExtra ? `\n**Objetivo adicional:** ${objetivoExtra}` : ""}${baseCurricular === "BNCC" && cidadeEstado ? `\n**Contexto regional:** ${cidadeEstado}` : ""}${instrucaoOrganizacao}
 
 Estruture o plano com:
 1. CABEÇALHO (disciplina, série, tema, ${qtd === 1 ? "duração" : "encontros"}, referencial curricular: ${baseCurricularLabel})
