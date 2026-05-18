@@ -99,6 +99,7 @@ function ContaPage() {
   const [serie, setSerie] = useState("");
   const [serieOutra, setSerieOutra] = useState("");
   const [nivelEJA, setNivelEJA] = useState("");
+  // nivelEJA só é relevante quando baseCurricular === "PBH_EJA"
   const [tema, setTema] = useState("");
   const [baseCurricular, setBaseCurricular] = useState("BNCC");
   const [cidadeEstado, setCidadeEstado] = useState("");
@@ -106,7 +107,6 @@ function ContaPage() {
   // Seção 2 — Organização do tempo
   const [quantidadeEncontros, setQuantidadeEncontros] = useState("1");
   const [duracao, setDuracao] = useState("50");
-  const [duracaoOutra, setDuracaoOutra] = useState("");
 
   // Seção 3 — Perfil da turma
   const [perfilTurma, setPerfilTurma] = useState("");
@@ -135,13 +135,13 @@ function ContaPage() {
 
   // ─── Derivados ─────────────────────────────────────────────────────────────
 
-  const isEJA = serie === "EJA";
+  const isEJA = baseCurricular === "PBH_EJA";
   const isBNCC = baseCurricular === "BNCC";
   const momentoDesativado = finalidade === "Avaliação" || finalidade === "Simulado";
 
   const disciplinaFinal = disciplina === "Outra" ? disciplinaOutra.trim() : disciplina;
   const serieFinal = serie === "Outra" ? serieOutra.trim() : serie;
-  const duracaoFinal = duracao === "Outro" ? duracaoOutra.trim() : duracao;
+  const duracaoFinal = duracao;
 
   const camposObrigatoriosOk =
     disciplinaFinal.trim() !== "" &&
@@ -182,7 +182,7 @@ function ContaPage() {
         recursos,
         baseCurricular,
         perfilTurma: perfilTurma.trim(),
-        ...(isEJA && { nivelEJA }),
+        ...(isEJA && nivelEJA && { nivelEJA }),
         ...(isBNCC && cidadeEstado.trim() && { cidadeEstado: cidadeEstado.trim() }),
         ...(objetivoExtra.trim() && { objetivoExtra: objetivoExtra.trim() }),
         ...(incluirExercicios && {
@@ -341,7 +341,7 @@ function ContaPage() {
               <Label htmlFor="serie">
                 Série / Ano <span className="text-destructive">*</span>
               </Label>
-              <Select value={serie} onValueChange={(v) => { setSerie(v); if (v !== "EJA") setNivelEJA(""); }}>
+              <Select value={serie} onValueChange={setSerie}>
                 <SelectTrigger id="serie">
                   <SelectValue placeholder="Selecione a série/ano" />
                 </SelectTrigger>
@@ -362,7 +362,7 @@ function ContaPage() {
             </div>
           </div>
 
-          {/* Nível EJA — condicional */}
+          {/* Nível EJA — condicional: aparece SOMENTE quando baseCurricular === PBH_EJA */}
           {isEJA && (
             <div className="space-y-2">
               <Label htmlFor="nivelEJA">
@@ -373,8 +373,8 @@ function ContaPage() {
                   <SelectValue placeholder="Selecione o nível EJA" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Ensino Fundamental">Ensino Fundamental</SelectItem>
-                  <SelectItem value="Ensino Médio">Ensino Médio</SelectItem>
+                  <SelectItem value="EJA_EF">EJA — Ensino Fundamental</SelectItem>
+                  <SelectItem value="EJA_EM">EJA — Ensino Médio</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -398,15 +398,15 @@ function ContaPage() {
             <Label htmlFor="baseCurricular">
               Base curricular <span className="text-destructive">*</span>
             </Label>
-            <Select value={baseCurricular} onValueChange={setBaseCurricular}>
+            <Select value={baseCurricular} onValueChange={(v) => { setBaseCurricular(v); if (v !== "PBH_EJA") setNivelEJA(""); }}>
               <SelectTrigger id="baseCurricular">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="BNCC">BNCC Nacional / rede sem currículo próprio</SelectItem>
                 <SelectItem value="CRMG">CRMG — Rede Estadual de Minas Gerais</SelectItem>
-                <SelectItem value="PBH_EF">PBH — Ensino Fundamental</SelectItem>
-                <SelectItem value="PBH_EJA">PBH — EJA</SelectItem>
+                <SelectItem value="PBH_EF">PBH — Ensino Fundamental (Rede Municipal de BH)</SelectItem>
+                <SelectItem value="PBH_EJA">PBH — EJA (Rede Municipal de BH)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
@@ -466,17 +466,8 @@ function ContaPage() {
                   <SelectItem value="50">50 minutos</SelectItem>
                   <SelectItem value="60">60 minutos</SelectItem>
                   <SelectItem value="90">90 minutos</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
-              {duracao === "Outro" && (
-                <Input
-                  placeholder="Informe a duração"
-                  value={duracaoOutra}
-                  onChange={(e) => setDuracaoOutra(e.target.value)}
-                  className="mt-2"
-                />
-              )}
             </div>
           </div>
         </SectionCard>
