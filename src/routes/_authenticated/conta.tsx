@@ -362,24 +362,6 @@ function ContaPage() {
             </div>
           </div>
 
-          {/* Nível EJA — condicional: aparece SOMENTE quando baseCurricular === PBH_EJA */}
-          {isEJA && (
-            <div className="space-y-2">
-              <Label htmlFor="nivelEJA">
-                Nível EJA <span className="text-destructive">*</span>
-              </Label>
-              <Select value={nivelEJA} onValueChange={setNivelEJA}>
-                <SelectTrigger id="nivelEJA" className="max-w-xs">
-                  <SelectValue placeholder="Selecione o nível EJA" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EJA_EF">EJA — Ensino Fundamental</SelectItem>
-                  <SelectItem value="EJA_EM">EJA — Ensino Médio</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {/* Tema */}
           <div className="space-y-2">
             <Label htmlFor="tema">
@@ -413,6 +395,24 @@ function ContaPage() {
               Escolha a referência curricular mais próxima da sua realidade.
             </p>
           </div>
+
+          {/* Nível EJA — condicional: aparece SOMENTE quando baseCurricular === PBH_EJA */}
+          {isEJA && (
+            <div className="space-y-2">
+              <Label htmlFor="nivelEJA">
+                Nível EJA <span className="text-destructive">*</span>
+              </Label>
+              <Select value={nivelEJA} onValueChange={setNivelEJA}>
+                <SelectTrigger id="nivelEJA" className="max-w-xs">
+                  <SelectValue placeholder="Selecione o nível EJA" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EJA_EF">EJA — Ensino Fundamental</SelectItem>
+                  <SelectItem value="EJA_EM">EJA — Ensino Médio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Cidade e Estado — condicional BNCC */}
           {isBNCC && (
