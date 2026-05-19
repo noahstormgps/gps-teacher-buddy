@@ -1,0 +1,35 @@
+name: Deploy Edge Function conta-generate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite CONFIRMAR para executar o deploy'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'CONFIRMAR'
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          ref: acddfbc
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.100.0
+
+      - name: Conferir versão do Supabase CLI
+        run: supabase --version
+
+      - name: Deploy conta-generate
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          supabase functions deploy conta-generate \
+            --project-ref "$SUPABASE_PROJECT_REF"
