@@ -173,6 +173,15 @@ function ContaPage() {
     setResult(null);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError("Sua sessão expirou. Faça login novamente para gerar o plano de aula.");
+        toast.error("Sua sessão expirou. Faça login novamente para gerar o plano de aula.");
+        setLoading(false);
+        return;
+      }
+
       const body: Record<string, unknown> = {
         disciplina: disciplinaFinal,
         serie: serieFinal,
@@ -198,7 +207,10 @@ function ContaPage() {
         }),
       };
 
-      const { data, error: fnError } = await supabase.functions.invoke("conta-generate", { body });
+      const { data, error: fnError } = await supabase.functions.invoke("conta-generate", {
+        body,
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
       if (fnError) throw new Error(fnError.message || "Erro ao chamar a função.");
       if (!data?.success) throw new Error(data?.error || "Não foi possível gerar o plano. Tente novamente.");
