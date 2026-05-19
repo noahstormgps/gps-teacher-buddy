@@ -11,12 +11,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm == 'CONFIRMAR'
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
         with:
-          ref: acddfbc
+          ref: main
 
       - name: Instalar Supabase CLI
         uses: supabase/setup-cli@v1
