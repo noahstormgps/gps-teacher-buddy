@@ -382,10 +382,11 @@ Estruture o plano com:
     );
 
     if (!geminiResponse.ok) {
+      const geminiStatus = geminiResponse.status;
       const errText = await geminiResponse.text();
-      console.error("[conta-generate] Gemini error:", errText);
+      console.error(`[conta-generate] Gemini error status=${geminiStatus}:`, errText);
       return new Response(
-        JSON.stringify({ success: false, error: "Erro ao chamar o Gemini. Tente novamente." }),
+        JSON.stringify({ success: false, error: `Erro ao chamar o Gemini (status ${geminiStatus}). Tente novamente.` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
