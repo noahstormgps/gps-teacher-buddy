@@ -392,22 +392,78 @@ Estruture o plano com:
     }
 
     const geminiData = await geminiResponse.json();
-    const content = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+
+    // Extrai texto de qualquer part que contenha campo "text" (compatível com modelos thinking)
+    const extractText = (data: Record<string, unknown>): string | null => {
+      const parts = (data as Record<string, unknown>)?.candidates as Array<Record<string, unknown>>;
+      const candidate = parts?.[0];
+      const contentParts = (candidate?.content as Record<string, unknown>)?.parts as Array<Record<string, unknown>>;
+      if (!Array.isArray(contentParts) || contentParts.length === 0) return null;
+      const joined = contentParts
+        .map((p) => (typeof p.text === "string" ? p.text : ""))
+        .join("\n")
+        .trim();
+      return joined || null;
+    };
+
+    let content = extractText(geminiData);
+    const firstFinishReason = geminiData?.candidates?.[0]?.finishReason ?? "N/A";
+
+    // Se veio vazio por RECITATION, tentar uma única vez com instrução anti-recitação
+    if (!content && firstFinishReason === "RECITATION") {
+      console.error("[conta-generate] RECITATION detected, retrying with anti-recitation instruction");
+
+      const antiRecitationPrefix =
+        "IMPORTANTE: Gere uma resposta autoral e original. " +
+        "Não reproduza trechos literais de documentos curriculares, BNCC, CRMG, PBH ou materiais de referência. " +
+        "Parafraseie orientações curriculares com linguagem própria, descreva habilidades por extenso quando necessário " +
+        "e produza um plano prático para uso em sala de aula.\n\n";
+
+      const retryResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: antiRecitationPrefix + userPrompt }] }],
+            generationConfig: {
+              maxOutputTokens: 32768,
+              temperature: 0.9,
+            },
+          }),
+        }
+      );
+
+      if (retryResponse.ok) {
+        const retryData = await retryResponse.json();
+        content = extractText(retryData);
+        const retryFinishReason = retryData?.candidates?.[0]?.finishReason ?? "N/A";
+        console.error(`[conta-generate] Retry finishReason=${retryFinishReason}, content=${content ? "present" : "empty"}`);
+      } else {
+        const retryStatus = retryResponse.status;
+        const retryErr = await retryResponse.text();
+        console.error(`[conta-generate] Retry Gemini error status=${retryStatus}:`, retryErr);
+      }
+    }
 
     if (!content) {
       const diagInfo = {
         hasCandidates: Array.isArray(geminiData?.candidates),
         candidatesCount: geminiData?.candidates?.length ?? 0,
-        finishReason: geminiData?.candidates?.[0]?.finishReason ?? "N/A",
+        finishReason: firstFinishReason,
         safetyRatings: geminiData?.candidates?.[0]?.safetyRatings ?? [],
         promptFeedback: geminiData?.promptFeedback ?? null,
         partsCount: geminiData?.candidates?.[0]?.content?.parts?.length ?? 0,
         partsTypes: (geminiData?.candidates?.[0]?.content?.parts ?? [])
           .map((p: Record<string, unknown>) => Object.keys(p).join(",")),
       };
-      console.error("[conta-generate] Gemini returned no text content:", JSON.stringify(diagInfo));
+      console.error("[conta-generate] Gemini returned no text content after retry:", JSON.stringify(diagInfo));
+      const errorMsg = firstFinishReason === "RECITATION"
+        ? "O modelo bloqueou a resposta por recitação. Tente simplificar o tema ou reduzir referências curriculares."
+        : "O modelo respondeu sem conteúdo textual. Verifique os logs para detalhes.";
       return new Response(
-        JSON.stringify({ success: false, error: "O modelo respondeu sem conteúdo textual. Verifique os logs para detalhes." }),
+        JSON.stringify({ success: false, error: errorMsg }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
