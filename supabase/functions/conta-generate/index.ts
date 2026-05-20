@@ -395,8 +395,19 @@ Estruture o plano com:
     const content = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
 
     if (!content) {
+      const diagInfo = {
+        hasCandidates: Array.isArray(geminiData?.candidates),
+        candidatesCount: geminiData?.candidates?.length ?? 0,
+        finishReason: geminiData?.candidates?.[0]?.finishReason ?? "N/A",
+        safetyRatings: geminiData?.candidates?.[0]?.safetyRatings ?? [],
+        promptFeedback: geminiData?.promptFeedback ?? null,
+        partsCount: geminiData?.candidates?.[0]?.content?.parts?.length ?? 0,
+        partsTypes: (geminiData?.candidates?.[0]?.content?.parts ?? [])
+          .map((p: Record<string, unknown>) => Object.keys(p).join(",")),
+      };
+      console.error("[conta-generate] Gemini returned no text content:", JSON.stringify(diagInfo));
       return new Response(
-        JSON.stringify({ success: false, error: "O modelo não retornou conteúdo. Tente novamente." }),
+        JSON.stringify({ success: false, error: "O modelo respondeu sem conteúdo textual. Verifique os logs para detalhes." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
