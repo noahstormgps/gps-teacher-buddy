@@ -280,7 +280,7 @@ function cleanMathFormatting(text: string): string {
 function getDisciplineHint(disciplina: string): string {
   const hints: Record<string, string> = {
     'Matemática': 'Inclua: problema contextualizado, manipulação concreta quando possível, verificação do raciocínio, e notação textual simples para expressões (nunca LaTeX).',
-    'Língua Portuguesa': 'Inclua: leitura, produção textual ou oralidade como prática central, análise linguística contextualizada, e gênero textual claramente definido.',
+    'Língua Portuguesa': 'Inclua: leitura, produção textual ou oralidade como prática central, análise linguística contextualizada, e gênero textual claramente definido. IMPORTANTE: quando usar gêneros textuais, crie exemplos 100% ficcionais e autorais — nunca reproduza notícias, crônicas, poemas ou textos reais. Invente situações, personagens e textos de apoio completamente originais.',
     'Língua Inglesa': 'Inclua: vocabulary-alvo da aula, função comunicativa (ex: making requests, describing places), skill trabalhada (reading/writing/speaking/listening), e interação em inglês nas atividades práticas.',
     'Ciências': 'Inclua: problema ou fenômeno observável, hipótese levantada pelos alunos, atividade investigativa ou experimental simples, e registro de observações.',
     'História': 'Inclua: fonte histórica ou evidência, temporalidade clara, conexão com o presente, e perspectiva dos sujeitos históricos envolvidos.',
@@ -399,12 +399,26 @@ Seu trabalho é:
 
 `;
 
+    const textualGenresRule = `REGRA SOBRE CRIAÇÃO DE TEXTOS E GÊNEROS TEXTUAIS:
+
+Quando o plano envolver gêneros textuais (notícia, crônica, reportagem, conto, poema, carta, e-mail, entrevista, anúncio, artigo de opinião, ou qualquer outro), você DEVE:
+
+- Criar exemplos de texto 100% ficcionais, autorais e inéditos.
+- Inventar personagens, lugares, datas, fatos e títulos fictícios.
+- Nunca reproduzir, imitar ou se aproximar de textos reais, notícias existentes, obras literárias conhecidas ou materiais didáticos publicados.
+- Usar nomes claramente fictícios, como: Cidade de Rioverdes, João Silva repórter, Escola Municipal Flores do Campo.
+- Tratar isso como criação literária original, não como reprodução de modelos.
+
+Esta regra é especialmente importante para: Língua Portuguesa, Língua Inglesa, Arte, Filosofia e qualquer disciplina que use textos como objeto de estudo.
+
+`;
+
     const curriculumRefPrefix = `[REFERÊNCIA CURRICULAR — usar como orientação, nunca reproduzir literalmente]:
 `;
 
     const baseBlock = curriculumRefPrefix + (baseCurricularInstructions[baseKey] ?? baseCurricularInstructions["BNCC"]);
     const pbhEjaBloco2 = baseKey === "PBH_EJA_EF" ? (curriculumRefPrefix + getPbhEjaBloco2(disciplina)) : "";
-    const systemPrompt = metaInstruction + formattingRules + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
+    const systemPrompt = metaInstruction + formattingRules + textualGenresRule + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
 
     // Construir userPrompt dinamicamente
     const qtd = Math.min(Math.max(Number(quantidadeEncontros) || 1, 1), 4);
