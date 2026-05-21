@@ -383,8 +383,8 @@ Seu trabalho é:
     const formattingRules = `REGRAS DE FORMATAÇÃO — OBRIGATÓRIAS:
 
 1. NUNCA use LaTeX, MathJax, KaTeX ou qualquer sintaxe matemática técnica.
-   Proibido: $\\frac{1}{2}$, \\sqrt{}, \\times, \\cdot, ^{}, $...
-   Correto: 1/2, raiz quadrada de, vezes, ponto, ao quadrado
+   Proibido: sintaxe matemática técnica com cifrões, barra invertida, comandos de fração, comandos de raiz, comandos de multiplicação ou marcações próprias de renderizadores matemáticos.
+   Correto: 1/2, raiz quadrada de, vezes, ponto, ao quadrado.
 
 2. Expressões matemáticas simples: escreva em texto corrido.
    Correto: "2x + 3 = 11", "3/4 da turma", "x ao quadrado", "π ≈ 3,14"
