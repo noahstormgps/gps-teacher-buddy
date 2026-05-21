@@ -399,26 +399,12 @@ Seu trabalho é:
 
 `;
 
-    const textualGenresRule = `REGRA SOBRE CRIAÇÃO DE TEXTOS E GÊNEROS TEXTUAIS:
-
-Quando o plano envolver gêneros textuais (notícia, crônica, reportagem, conto, poema, carta, e-mail, entrevista, anúncio, artigo de opinião, ou qualquer outro), você DEVE:
-
-- Criar exemplos de texto 100% ficcionais, autorais e inéditos.
-- Inventar personagens, lugares, datas, fatos e títulos fictícios.
-- Nunca reproduzir, imitar ou se aproximar de textos reais, notícias existentes, obras literárias conhecidas ou materiais didáticos publicados.
-- Usar nomes claramente fictícios, como: Cidade de Rioverdes, João Silva repórter, Escola Municipal Flores do Campo.
-- Tratar isso como criação literária original, não como reprodução de modelos.
-
-Esta regra é especialmente importante para: Língua Portuguesa, Língua Inglesa, Arte, Filosofia e qualquer disciplina que use textos como objeto de estudo.
-
-`;
-
     const curriculumRefPrefix = `[REFERÊNCIA CURRICULAR — usar como orientação, nunca reproduzir literalmente]:
 `;
 
     const baseBlock = curriculumRefPrefix + (baseCurricularInstructions[baseKey] ?? baseCurricularInstructions["BNCC"]);
     const pbhEjaBloco2 = baseKey === "PBH_EJA_EF" ? (curriculumRefPrefix + getPbhEjaBloco2(disciplina)) : "";
-    const systemPrompt = metaInstruction + formattingRules + textualGenresRule + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
+    const systemPrompt = metaInstruction + formattingRules + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
 
     // Construir userPrompt dinamicamente
     const qtd = Math.min(Math.max(Number(quantidadeEncontros) || 1, 1), 4);
@@ -555,6 +541,45 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
       }
     }
 
+    // Fallback de nível 2: se retry também retornou RECITATION, usar placeholder para texto-base
+    if (!content && firstFinishReason === "RECITATION") {
+      console.error("[conta-generate] RECITATION persisted after retry, using placeholder fallback");
+
+      const placeholderInstruction =
+        "\n\nINSTRUÇÃO ADICIONAL:\n" +
+        "Se o plano de aula incluir um texto-base de exemplo, como notícia, crônica, poema, conto, reportagem, entrevista, carta, e-mail, anúncio, artigo de opinião ou similar, NÃO escreva o texto completo.\n" +
+        "Substitua o texto-base por um placeholder descritivo entre colchetes.\n" +
+        "Exemplo: [Texto-base: selecione uma notícia curta, de 8 a 12 linhas, sobre um evento local ou escolar, adequada ao nível da turma.]\n" +
+        "Gere normalmente todos os outros elementos do plano: objetivos, sequência didática, atividades, perguntas orientadoras, avaliação, adaptações, recursos e orientações ao professor.";
+
+      const fallbackResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt + placeholderInstruction }] }],
+            generationConfig: {
+              maxOutputTokens: 32768,
+              temperature: 0.7,
+            },
+          }),
+        }
+      );
+
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json();
+        content = extractText(fallbackData);
+        const fallbackFinishReason = fallbackData?.candidates?.[0]?.finishReason ?? "N/A";
+        console.error(`[conta-generate] Placeholder fallback finishReason=${fallbackFinishReason}, content=${content ? "present" : "empty"}`);
+      } else {
+        const fallbackStatus = fallbackResponse.status;
+        const fallbackErr = await fallbackResponse.text();
+        console.error(`[conta-generate] Placeholder fallback Gemini error status=${fallbackStatus}:`, fallbackErr);
+      }
+    }
+
     if (!content) {
       const diagInfo = {
         hasCandidates: Array.isArray(geminiData?.candidates),
@@ -566,9 +591,9 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
         partsTypes: (geminiData?.candidates?.[0]?.content?.parts ?? [])
           .map((p: Record<string, unknown>) => Object.keys(p).join(",")),
       };
-      console.error("[conta-generate] Gemini returned no text content after retry:", JSON.stringify(diagInfo));
+      console.error("[conta-generate] Gemini returned no text content after all attempts:", JSON.stringify(diagInfo));
       const errorMsg = firstFinishReason === "RECITATION"
-        ? "O modelo bloqueou a resposta por recitação. Tente simplificar o tema ou reduzir referências curriculares."
+        ? "O modelo bloqueou a resposta por recitação mesmo após tentativas alternativas. Tente simplificar o tema."
         : "O modelo respondeu sem conteúdo textual. Verifique os logs para detalhes.";
       return new Response(
         JSON.stringify({ success: false, error: errorMsg }),
