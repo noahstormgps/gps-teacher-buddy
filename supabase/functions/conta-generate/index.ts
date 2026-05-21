@@ -475,9 +475,46 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
       }
     );
 
-    if (!geminiResponse.ok) {
-      const geminiStatus = geminiResponse.status;
-      const errText = await geminiResponse.text();
+    // Retry único para 503/429 (alta demanda temporária do Gemini)
+    let finalGeminiResponse = geminiResponse;
+    if (!geminiResponse.ok && (geminiResponse.status === 503 || geminiResponse.status === 429)) {
+      const retryStatus = geminiResponse.status;
+      const retryErrText = await geminiResponse.text();
+      console.error(`[conta-generate] Gemini temporary unavailable status=${retryStatus}, retrying once after delay`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      finalGeminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            generationConfig: {
+              maxOutputTokens: 32768,
+              temperature: 0.7,
+            },
+          }),
+        }
+      );
+      if (!finalGeminiResponse.ok && (finalGeminiResponse.status === 503 || finalGeminiResponse.status === 429)) {
+        const finalStatus = finalGeminiResponse.status;
+        const finalErrText = await finalGeminiResponse.text();
+        console.error(`[conta-generate] Gemini still unavailable after retry status=${finalStatus}:`, finalErrText);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "O serviço de IA está com alta demanda no momento. Aguarde alguns segundos e tente gerar novamente.",
+            errorCode: "PROVIDER_UNAVAILABLE",
+          }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    if (!finalGeminiResponse.ok) {
+      const geminiStatus = finalGeminiResponse.status;
+      const errText = await finalGeminiResponse.text();
       console.error(`[conta-generate] Gemini error status=${geminiStatus}:`, errText);
       return new Response(
         JSON.stringify({ success: false, error: `Erro ao chamar o Gemini (status ${geminiStatus}). Tente novamente.` }),
@@ -485,7 +522,7 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
       );
     }
 
-    const geminiData = await geminiResponse.json();
+    const geminiData = await finalGeminiResponse.json();
 
     // Extrai texto de qualquer part que contenha campo "text" (compatível com modelos thinking)
     const extractText = (data: Record<string, unknown>): string | null => {
@@ -592,11 +629,11 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
           .map((p: Record<string, unknown>) => Object.keys(p).join(",")),
       };
       console.error("[conta-generate] Gemini returned no text content after all attempts:", JSON.stringify(diagInfo));
-      const errorMsg = firstFinishReason === "RECITATION"
-        ? "O modelo bloqueou a resposta por recitação mesmo após tentativas alternativas. Tente simplificar o tema."
-        : "O modelo respondeu sem conteúdo textual. Verifique os logs para detalhes.";
+      const errorBody = firstFinishReason === "RECITATION"
+        ? { success: false, error: "Não foi possível gerar o plano para este tema. Tente reformular o tema da aula e gerar novamente.", errorCode: "CONTENT_FILTERED" }
+        : { success: false, error: "O modelo respondeu sem conteúdo textual. Verifique os logs para detalhes." };
       return new Response(
-        JSON.stringify({ success: false, error: errorMsg }),
+        JSON.stringify(errorBody),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
