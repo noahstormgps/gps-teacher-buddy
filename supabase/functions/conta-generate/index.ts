@@ -310,9 +310,27 @@ Deno.serve(async (req) => {
     const competenciasLabel = competenciasLabels[baseKey] ?? competenciasLabels["BNCC"];
 
     // Construir systemPrompt
-    const baseBlock = baseCurricularInstructions[baseKey] ?? baseCurricularInstructions["BNCC"];
-    const pbhEjaBloco2 = baseKey === "PBH_EJA_EF" ? getPbhEjaBloco2(disciplina) : "";
-    const systemPrompt = baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
+    const metaInstruction = `INSTRUÇÃO META — LEIA ANTES DE QUALQUER COISA:
+
+Você é um especialista em planejamento pedagógico criando um plano de aula ORIGINAL e AUTORAL.
+
+O conteúdo curricular fornecido abaixo é CONTEXTO DE REFERÊNCIA — não texto para reproduzir.
+
+Seu trabalho é:
+- Criar plano de aula 100% original inspirado nas diretrizes curriculares.
+- Parafrasear competências e habilidades com linguagem docente própria.
+- Descrever objetivos de aprendizagem com suas próprias palavras.
+- Nunca reproduzir trechos literais de documentos normativos.
+- Produzir conteúdo aplicável em sala de aula real, não transcrição de documentos oficiais.
+
+`;
+
+    const curriculumRefPrefix = `[REFERÊNCIA CURRICULAR — usar como orientação, nunca reproduzir literalmente]:
+`;
+
+    const baseBlock = curriculumRefPrefix + (baseCurricularInstructions[baseKey] ?? baseCurricularInstructions["BNCC"]);
+    const pbhEjaBloco2 = baseKey === "PBH_EJA_EF" ? (curriculumRefPrefix + getPbhEjaBloco2(disciplina)) : "";
+    const systemPrompt = metaInstruction + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
 
     // Construir userPrompt dinamicamente
     const qtd = Math.min(Math.max(Number(quantidadeEncontros) || 1, 1), 4);
