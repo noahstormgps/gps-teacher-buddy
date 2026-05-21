@@ -242,6 +242,61 @@ const competenciasLabels: Record<string, string> = {
 };
 
 // ============================================================
+// LIMPEZA DE FORMATAÇÃO MATEMÁTICA
+// ============================================================
+
+function cleanMathFormatting(text: string): string {
+  return text
+    // Remover delimitadores LaTeX inline e display
+    .replace(/\$\$[\s\S]*?\$\$/g, (match: string) => match.replace(/\$\$/g, '').trim())
+    .replace(/\$([^$]+)\$/g, '$1')
+    // Converter \frac{a}{b} → a/b
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
+    // Converter \sqrt{x} → raiz quadrada de x
+    .replace(/\\sqrt\{([^}]+)\}/g, 'raiz quadrada de $1')
+    // Remover ^ de potências simples
+    .replace(/\^2/g, '²')
+    .replace(/\^3/g, '³')
+    .replace(/\^\{([^}]+)\}/g, ' elevado a $1')
+    // Converter comandos comuns
+    .replace(/\\times/g, '×')
+    .replace(/\\cdot/g, '·')
+    .replace(/\\neq/g, '≠')
+    .replace(/\\leq/g, '≤')
+    .replace(/\\geq/g, '≥')
+    .replace(/\\pi/g, 'π')
+    .replace(/\\alpha/g, 'α')
+    .replace(/\\beta/g, 'β')
+    .replace(/\\Delta/g, 'Δ')
+    // Remover barras residuais de outros comandos LaTeX
+    .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, '$1')
+    .replace(/\\[a-zA-Z]+/g, '');
+}
+
+// ============================================================
+// ORIENTAÇÃO POR DISCIPLINA
+// ============================================================
+
+function getDisciplineHint(disciplina: string): string {
+  const hints: Record<string, string> = {
+    'Matemática': 'Inclua: problema contextualizado, manipulação concreta quando possível, verificação do raciocínio, e notação textual simples para expressões (nunca LaTeX).',
+    'Língua Portuguesa': 'Inclua: leitura, produção textual ou oralidade como prática central, análise linguística contextualizada, e gênero textual claramente definido.',
+    'Língua Inglesa': 'Inclua: vocabulary-alvo da aula, função comunicativa (ex: making requests, describing places), skill trabalhada (reading/writing/speaking/listening), e interação em inglês nas atividades práticas.',
+    'Ciências': 'Inclua: problema ou fenômeno observável, hipótese levantada pelos alunos, atividade investigativa ou experimental simples, e registro de observações.',
+    'História': 'Inclua: fonte histórica ou evidência, temporalidade clara, conexão com o presente, e perspectiva dos sujeitos históricos envolvidos.',
+    'Geografia': 'Inclua: escala geográfica (local/regional/global), territorialidade, leitura de imagem ou mapa quando relevante, e conexão com a realidade do aluno.',
+    'Arte': 'Inclua: fruição (apreciação de obra), produção prática pelo aluno, e reflexão sobre processo criativo.',
+    'Educação Física': 'Inclua: prática corporal central, aquecimento, regras e variações da atividade, e reflexão sobre o movimento.',
+    'Física': 'Inclua: fenômeno observável, grandeza física envolvida, expressões em notação textual simples (nunca LaTeX), e aplicação prática.',
+    'Química': 'Inclua: substância ou reação do cotidiano, representação textual de fórmulas simples (ex: H2O, CO2), e conexão com segurança ou saúde.',
+    'Biologia': 'Inclua: organismo ou processo biológico observável, escala do micro ao macro quando relevante, e conexão com saúde ou meio ambiente.',
+    'Filosofia': 'Inclua: pergunta filosófica disparadora, texto ou excerto como referência, e espaço para argumentação do aluno.',
+    'Sociologia': 'Inclua: fenômeno social atual, conceito sociológico em linguagem acessível, e análise crítica contextualizada.',
+  };
+  return hints[disciplina] || 'Inclua atividade prática aplicável e conexão com a realidade do aluno.';
+}
+
+// ============================================================
 // HANDLER PRINCIPAL
 // ============================================================
 
@@ -325,12 +380,31 @@ Seu trabalho é:
 
 `;
 
+    const formattingRules = `REGRAS DE FORMATAÇÃO — OBRIGATÓRIAS:
+
+1. NUNCA use LaTeX, MathJax, KaTeX ou qualquer sintaxe matemática técnica.
+   Proibido: $\\frac{1}{2}$, \\sqrt{}, \\times, \\cdot, ^{}, $...
+   Correto: 1/2, raiz quadrada de, vezes, ponto, ao quadrado
+
+2. Expressões matemáticas simples: escreva em texto corrido.
+   Correto: "2x + 3 = 11", "3/4 da turma", "x ao quadrado", "π ≈ 3,14"
+
+3. Símbolos Unicode são permitidos quando adequados: ², ³, ½, ¼, π, ≠, ≤, ≥, °
+
+4. O plano deve ser legível como texto puro, copiável diretamente para Word ou e-mail.
+   Sem sintaxe que exija renderizador matemático.
+
+5. Markdown básico é permitido apenas para: **negrito**, *itálico*, # títulos, listas com -.
+   Nunca use blocos de código (\`\`\`) para conteúdo pedagógico.
+
+`;
+
     const curriculumRefPrefix = `[REFERÊNCIA CURRICULAR — usar como orientação, nunca reproduzir literalmente]:
 `;
 
     const baseBlock = curriculumRefPrefix + (baseCurricularInstructions[baseKey] ?? baseCurricularInstructions["BNCC"]);
     const pbhEjaBloco2 = baseKey === "PBH_EJA_EF" ? (curriculumRefPrefix + getPbhEjaBloco2(disciplina)) : "";
-    const systemPrompt = metaInstruction + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
+    const systemPrompt = metaInstruction + formattingRules + baseBlock + pbhEjaBloco2 + antiHallucinationInstruction;
 
     // Construir userPrompt dinamicamente
     const qtd = Math.min(Math.max(Number(quantidadeEncontros) || 1, 1), 4);
@@ -372,7 +446,9 @@ Estruture o plano com:
 6. RECURSOS NECESSÁRIOS
 7. AVALIAÇÃO (critérios e instrumentos)
 8. ADAPTAÇÕES PARA INCLUSÃO
-9. REFERÊNCIAS`;
+9. REFERÊNCIAS
+
+Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
 
     // Chamar Gemini 2.5 Flash
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
@@ -486,10 +562,11 @@ Estruture o plano com:
       );
     }
 
+    const cleanedContent = cleanMathFormatting(content);
     const title = `Plano de Aula: ${tema} - ${disciplina} (${serie})`;
 
     return new Response(
-      JSON.stringify({ success: true, error: null, content, title, userPrompt }),
+      JSON.stringify({ success: true, error: null, content: cleanedContent, title, userPrompt }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
