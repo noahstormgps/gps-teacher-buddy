@@ -566,15 +566,27 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
         }
       );
 
-      if (retryResponse.ok) {
+      if (!retryResponse.ok) {
+        const retryStatus = retryResponse.status;
+        const retryErr = await retryResponse.text();
+        // 503/429 no retry = provedor indisponível, não RECITATION persistente
+        if (retryStatus === 503 || retryStatus === 429) {
+          console.error(`[conta-generate] Retry returned provider unavailable status=${retryStatus}, stopping before placeholder fallback`);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "O serviço de IA está com alta demanda. Aguarde alguns segundos e tente novamente.",
+              errorCode: "PROVIDER_UNAVAILABLE",
+            }),
+            { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        console.error(`[conta-generate] Retry Gemini error status=${retryStatus}:`, retryErr);
+      } else {
         const retryData = await retryResponse.json();
         content = extractText(retryData);
         const retryFinishReason = retryData?.candidates?.[0]?.finishReason ?? "N/A";
         console.error(`[conta-generate] Retry finishReason=${retryFinishReason}, content=${content ? "present" : "empty"}`);
-      } else {
-        const retryStatus = retryResponse.status;
-        const retryErr = await retryResponse.text();
-        console.error(`[conta-generate] Retry Gemini error status=${retryStatus}:`, retryErr);
       }
     }
 
@@ -584,10 +596,11 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
 
       const placeholderInstruction =
         "\n\nINSTRUÇÃO ADICIONAL:\n" +
-        "Se o plano de aula incluir um texto-base de exemplo, como notícia, crônica, poema, conto, reportagem, entrevista, carta, e-mail, anúncio, artigo de opinião ou similar, NÃO escreva o texto completo.\n" +
-        "Substitua o texto-base por um placeholder descritivo entre colchetes.\n" +
-        "Exemplo: [Texto-base: selecione uma notícia curta, de 8 a 12 linhas, sobre um evento local ou escolar, adequada ao nível da turma.]\n" +
-        "Gere normalmente todos os outros elementos do plano: objetivos, sequência didática, atividades, perguntas orientadoras, avaliação, adaptações, recursos e orientações ao professor.";
+        "Gere o plano de aula completo com objetivos, sequência didática, atividades, avaliação, adaptações, recursos e orientações ao professor.\n" +
+        "Se o plano incluir material de apoio, texto-base, notícia, imagem, experimento, situação-problema, tabela, gráfico, roteiro, enunciado ou exemplo extenso, NÃO escreva esse material completo.\n" +
+        "Substitua por uma descrição entre colchetes indicando o tipo de material e critérios de seleção.\n" +
+        "Exemplo: [Material de apoio: imagem, vídeo curto ou texto de um parágrafo sobre o tema, adequado à faixa etária da turma, a critério do professor.]\n" +
+        "Gere todo o restante do plano normalmente, de forma autoral, prática e aplicável.";
 
       const fallbackResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
@@ -605,15 +618,26 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
         }
       );
 
-      if (fallbackResponse.ok) {
+      if (!fallbackResponse.ok) {
+        const fallbackStatus = fallbackResponse.status;
+        const fallbackErr = await fallbackResponse.text();
+        if (fallbackStatus === 503 || fallbackStatus === 429) {
+          console.error(`[conta-generate] Placeholder fallback returned provider unavailable status=${fallbackStatus}`);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "O serviço de IA está com alta demanda. Aguarde alguns segundos e tente novamente.",
+              errorCode: "PROVIDER_UNAVAILABLE",
+            }),
+            { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        console.error(`[conta-generate] Placeholder fallback Gemini error status=${fallbackStatus}:`, fallbackErr);
+      } else {
         const fallbackData = await fallbackResponse.json();
         content = extractText(fallbackData);
         const fallbackFinishReason = fallbackData?.candidates?.[0]?.finishReason ?? "N/A";
         console.error(`[conta-generate] Placeholder fallback finishReason=${fallbackFinishReason}, content=${content ? "present" : "empty"}`);
-      } else {
-        const fallbackStatus = fallbackResponse.status;
-        const fallbackErr = await fallbackResponse.text();
-        console.error(`[conta-generate] Placeholder fallback Gemini error status=${fallbackStatus}:`, fallbackErr);
       }
     }
 
