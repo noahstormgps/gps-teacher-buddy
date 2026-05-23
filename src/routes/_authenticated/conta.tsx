@@ -88,6 +88,24 @@ function SectionCard({
   );
 }
 
+// ─── Extrator de mensagem amigável de erro da Edge Function ─────────────────────
+
+function extractFriendlyError(data: unknown): string {
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>;
+    if (d.errorCode === "PROVIDER_UNAVAILABLE") {
+      return "O serviço de IA está com alta demanda no momento. Aguarde alguns segundos e tente gerar novamente.";
+    }
+    if (d.errorCode === "CONTENT_FILTERED") {
+      return "Não foi possível gerar o plano para este tema. Tente reformular o tema da aula e gerar novamente.";
+    }
+    if (typeof d.error === "string" && d.error.trim() !== "") {
+      return d.error;
+    }
+  }
+  return "Não foi possível gerar o plano agora. Tente novamente em alguns instantes.";
+}
+
 // ─── Componente principal ────────────────────────────────────────────────────
 
 function ContaPage() {
@@ -212,7 +230,11 @@ function ContaPage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (fnError) throw new Error(fnError.message || "Erro ao chamar a função.");
+      if (fnError) {
+        // Extrair mensagem amigável do corpo JSON retornado pela Edge Function
+        const friendlyMsg = extractFriendlyError(data);
+        throw new Error(friendlyMsg);
+      }
       if (!data?.success) throw new Error(data?.error || "Não foi possível gerar o plano. Tente novamente.");
       if (!data?.content) throw new Error("O modelo não retornou conteúdo. Tente novamente.");
 
