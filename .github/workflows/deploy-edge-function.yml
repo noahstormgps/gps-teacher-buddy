@@ -1,8 +1,12 @@
-name: Deploy Edge Function conta-generate
+name: Deploy Edge Function GPS Docente
 
 on:
   workflow_dispatch:
     inputs:
+      function_name:
+        description: 'Nome da Edge Function a deployar (ex: sala-generate, conta-generate)'
+        required: true
+        default: 'sala-generate'
       confirm:
         description: 'Digite CONFIRMAR para executar o deploy'
         required: true
@@ -28,10 +32,10 @@ jobs:
       - name: Conferir versão do Supabase CLI
         run: supabase --version
 
-      - name: Deploy conta-generate
+      - name: Deploy ${{ github.event.inputs.function_name }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase functions deploy conta-generate \
+          supabase functions deploy ${{ github.event.inputs.function_name }} \
             --project-ref "$SUPABASE_PROJECT_REF"
