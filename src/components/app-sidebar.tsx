@@ -45,7 +45,6 @@ const NAV_ITEMS = [
     color: "text-blue-500",
     activeBg: "bg-blue-50",
     activeBorder: "border-l-blue-500",
-    comingSoon: true,
   },
   {
     label: "R.A.P.I.D.O.",

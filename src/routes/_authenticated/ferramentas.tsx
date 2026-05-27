@@ -45,7 +45,7 @@ const methods: Method[] = [
     iconBg: "bg-blue-50 text-blue-600",
     borderAvailable: "border-blue-200 hover:border-blue-400",
     borderSoon: "border-blue-200/40",
-    comingSoon: true,
+    route: "/sala",
   },
   {
     icon: FileText,

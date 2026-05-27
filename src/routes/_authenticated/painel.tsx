@@ -41,8 +41,8 @@ const quickTools: QuickTool[] = [
     desc: "Protocolos de sondagem, antecipação e ação para situações reais.",
     color: "text-blue-600",
     iconBg: "bg-blue-50 text-blue-600",
-    borderColor: "border-blue-200/60",
-    comingSoon: true,
+    borderColor: "border-blue-200 hover:border-blue-400",
+    href: "/sala",
   },
   {
     icon: FileText,
