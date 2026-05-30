@@ -51,8 +51,8 @@ const quickTools: QuickTool[] = [
     desc: "Transforme anotações em relatórios, atas, pareceres e documentos escolares.",
     color: "text-amber-600",
     iconBg: "bg-amber-50 text-amber-600",
-    borderColor: "border-amber-200/60",
-    comingSoon: true,
+    borderColor: "border-amber-200 hover:border-amber-400",
+    href: "/rapido",
   },
 ];
 

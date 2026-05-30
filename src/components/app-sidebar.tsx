@@ -54,7 +54,6 @@ const NAV_ITEMS = [
     color: "text-amber-500",
     activeBg: "bg-amber-50",
     activeBorder: "border-l-amber-500",
-    comingSoon: true,
   },
   {
     label: "Biblioteca",

@@ -56,7 +56,7 @@ const methods: Method[] = [
     iconBg: "bg-amber-50 text-amber-600",
     borderAvailable: "border-amber-200 hover:border-amber-400",
     borderSoon: "border-amber-200/40",
-    comingSoon: true,
+    route: "/rapido",
   },
   {
     icon: Library,
