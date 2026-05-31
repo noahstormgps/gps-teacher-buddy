@@ -152,6 +152,48 @@ function classifyEvent(eventType: string): EventAction {
 }
 
 // ============================================================
+// BUSCA PAGINADA DE USUÁRIO POR E-MAIL
+// Percorre todas as páginas da listagem de usuários do Supabase Auth
+// para localizar o usuário pelo e-mail normalizado.
+// Usa perPage = 1000 (máximo suportado pela API do Supabase).
+// Para quando encontra o usuário ou quando não há mais páginas.
+// ============================================================
+async function findUserByEmail(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  email: string,
+): Promise<{ id: string; email: string } | null> {
+  const PER_PAGE = 1000;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await (supabaseAdmin.auth.admin as unknown as {
+      listUsers: (opts: { page: number; perPage: number }) => Promise<{
+        data: { users: Array<{ id: string; email?: string }> } | null;
+        error: { message: string } | null;
+      }>;
+    }).listUsers({ page, perPage: PER_PAGE });
+
+    if (error) {
+      console.error(`[kiwify-webhook] findUserByEmail error page=${page}:`, error.message);
+      return null;
+    }
+
+    const users = data?.users ?? [];
+
+    // Parar se página vazia (sem mais resultados)
+    if (users.length === 0) return null;
+
+    const found = users.find((u) => u.email?.toLowerCase() === email);
+    if (found) return { id: found.id, email: found.email! };
+
+    // Se retornou menos que perPage, não há próxima página
+    if (users.length < PER_PAGE) return null;
+
+    page++;
+  }
+}
+
+// ============================================================
 // HANDLER PRINCIPAL
 // ============================================================
 Deno.serve(async (req) => {
@@ -239,19 +281,13 @@ Deno.serve(async (req) => {
     );
 
     // ── 7. BUSCAR OU CRIAR USUÁRIO ─────────────────────────────
-    // Buscar usuário existente pelo e-mail
-    const { data: userListData, error: userListError } = await supabaseAdmin.auth.admin.listUsers();
-
+    // Busca paginada pelo e-mail em toda a base de usuários
     let userId: string | null = null;
 
-    if (!userListError && userListData?.users) {
-      const existingUser = userListData.users.find(
-        (u) => u.email?.toLowerCase() === email,
-      );
-      if (existingUser) {
-        userId = existingUser.id;
-        console.log(`[kiwify-webhook] Existing user found: ${maskUserId(userId)}`);
-      }
+    const foundUser = await findUserByEmail(supabaseAdmin, email);
+    if (foundUser) {
+      userId = foundUser.id;
+      console.log(`[kiwify-webhook] Existing user found: ${maskUserId(userId)}`);
     }
 
     // Se não encontrou, criar novo usuário
@@ -266,16 +302,40 @@ Deno.serve(async (req) => {
         },
       });
 
-      if (createError || !newUserData?.user) {
-        console.error("[kiwify-webhook] Failed to create user:", createError?.message);
+      if (createError) {
+        // Tratar caso de race condition: usuário criado entre a busca e o createUser
+        if (createError.message?.toLowerCase().includes("already") ||
+            createError.message?.toLowerCase().includes("exists") ||
+            createError.message?.toLowerCase().includes("duplicate")) {
+          console.warn("[kiwify-webhook] createUser conflict — retrying lookup");
+          const retryUser = await findUserByEmail(supabaseAdmin, email);
+          if (retryUser) {
+            userId = retryUser.id;
+            console.log(`[kiwify-webhook] User found on retry: ${maskUserId(userId)}`);
+          } else {
+            console.error("[kiwify-webhook] Could not find user after conflict");
+            return new Response(
+              JSON.stringify({ ok: false, error: "internal_error" }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
+        } else {
+          console.error("[kiwify-webhook] Failed to create user:", createError.message);
+          return new Response(
+            JSON.stringify({ ok: false, error: "internal_error" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      } else if (!newUserData?.user) {
+        console.error("[kiwify-webhook] createUser returned no user");
         return new Response(
           JSON.stringify({ ok: false, error: "internal_error" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
+      } else {
+        userId = newUserData.user.id;
+        console.log(`[kiwify-webhook] New user created: ${maskUserId(userId)}`);
       }
-
-      userId = newUserData.user.id;
-      console.log(`[kiwify-webhook] New user created: ${maskUserId(userId)}`);
     }
 
     // ── 8. EXTRAÇÃO DO EXTERNAL_ID ─────────────────────────────
