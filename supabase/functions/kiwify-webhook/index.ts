@@ -1,6 +1,6 @@
 // GPS Docente Premium — Edge Function: kiwify-webhook
-// Recebe eventos da Kiwify e ativa/cancela acesso premium em public.subscriptions.
-// Arquitetura: Kiwify → Supabase Edge Function → Supabase Auth + public.subscriptions
+// Recebe eventos da Kiwify e ativa/cancela acesso premium em public.users.
+// Arquitetura: Kiwify → Supabase Edge Function → Supabase Auth + public.users
 //
 // URL de configuração na Kiwify:
 // https://<SUPABASE_PROJECT_REF>.supabase.co/functions/v1/kiwify-webhook?token=<KIWIFY_WEBHOOK_TOKEN>
@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
-    // ── 7. BUSCAR OU CRIAR USUÁRIO ─────────────────────────────
+    // ── 7. BUSCAR OU CRIAR USUÁRIO EM AUTH.USERS ───────────────
     // Busca paginada pelo e-mail em toda a base de usuários
     let userId: string | null = null;
 
@@ -341,58 +341,80 @@ Deno.serve(async (req) => {
     // ── 8. EXTRAÇÃO DO EXTERNAL_ID ─────────────────────────────
     const externalId = extractExternalId(payload);
 
-    // ── 9. UPSERT EM PUBLIC.SUBSCRIPTIONS ─────────────────────
-    // Verificar se já existe registro para o usuário
-    const { data: existingSub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("id")
-      .eq("user_id", userId)
+    // ── 9. UPSERT EM PUBLIC.USERS ──────────────────────────────
+    // Verificar se já existe registro em public.users para o userId
+    const { data: existingPublicUser } = await supabaseAdmin
+      .from("users")
+      .select("id, role")
+      .eq("id", userId)
       .maybeSingle();
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 dias
 
     if (action === "activate") {
-      const subscriptionData = {
-        plan: "premium",
-        status: "active",
-        provider: "kiwify",
-        external_id: externalId ?? null,
-        started_at: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
+      const activateData = {
+        is_premium: true,
+        premium_expires_at: expiresAt.toISOString(),
+        kiwify_email: email,
+        kiwify_transaction_id: externalId ?? null,
         updated_at: now.toISOString(),
       };
 
-      if (existingSub) {
-        // Atualizar registro existente
+      if (existingPublicUser) {
+        // Atualizar registro existente — preservar role atual
         const { error: updateError } = await supabaseAdmin
-          .from("subscriptions")
-          .update(subscriptionData)
-          .eq("user_id", userId);
+          .from("users")
+          .update(activateData)
+          .eq("id", userId);
 
         if (updateError) {
-          console.error("[kiwify-webhook] Failed to update subscription:", updateError.message);
+          console.error("[kiwify-webhook] Failed to update public.users:", updateError.message);
           return new Response(
             JSON.stringify({ ok: false, error: "internal_error" }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
       } else {
-        // Inserir novo registro
+        // Inserir novo registro em public.users
         const { error: insertError } = await supabaseAdmin
-          .from("subscriptions")
-          .insert({ user_id: userId, ...subscriptionData });
+          .from("users")
+          .insert({
+            id: userId,
+            email,
+            role: "user",
+            ...activateData,
+          });
 
         if (insertError) {
-          console.error("[kiwify-webhook] Failed to insert subscription:", insertError.message);
-          return new Response(
-            JSON.stringify({ ok: false, error: "internal_error" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
+          // Race condition: registro criado entre o select e o insert — tentar update
+          if (insertError.message?.toLowerCase().includes("duplicate") ||
+              insertError.message?.toLowerCase().includes("unique") ||
+              insertError.message?.toLowerCase().includes("already")) {
+            console.warn("[kiwify-webhook] Insert conflict on public.users — retrying update");
+            const { error: retryUpdateError } = await supabaseAdmin
+              .from("users")
+              .update(activateData)
+              .eq("id", userId);
+
+            if (retryUpdateError) {
+              console.error("[kiwify-webhook] Failed to update public.users on retry:", retryUpdateError.message);
+              return new Response(
+                JSON.stringify({ ok: false, error: "internal_error" }),
+                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              );
+            }
+          } else {
+            console.error("[kiwify-webhook] Failed to update public.users:", insertError.message);
+            return new Response(
+              JSON.stringify({ ok: false, error: "internal_error" }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
         }
       }
 
-      console.log(`[kiwify-webhook] Premium activated for user ${maskUserId(userId)}`);
+      console.log(`[kiwify-webhook] Premium activated in public.users for ${maskUserId(userId)}`);
       return new Response(
         JSON.stringify({ ok: true, action: "activated", email: maskEmail(email) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -401,37 +423,48 @@ Deno.serve(async (req) => {
 
     // action === "cancel"
     const cancelData = {
-      plan: "free",
-      status: "canceled",
+      is_premium: false,
+      premium_expires_at: null,
+      kiwify_email: email,
+      kiwify_transaction_id: externalId ?? null,
       updated_at: now.toISOString(),
     };
 
-    if (existingSub) {
+    if (existingPublicUser) {
       const { error: cancelError } = await supabaseAdmin
-        .from("subscriptions")
+        .from("users")
         .update(cancelData)
-        .eq("user_id", userId);
+        .eq("id", userId);
 
       if (cancelError) {
-        console.error("[kiwify-webhook] Failed to cancel subscription:", cancelError.message);
+        console.error("[kiwify-webhook] Failed to update public.users:", cancelError.message);
         return new Response(
           JSON.stringify({ ok: false, error: "internal_error" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
     } else {
-      // Não há registro — inserir como free/canceled para consistência
+      // Não há registro em public.users — inserir como não-premium para consistência
       const { error: insertCancelError } = await supabaseAdmin
-        .from("subscriptions")
-        .insert({ user_id: userId, ...cancelData, started_at: now.toISOString() });
+        .from("users")
+        .insert({
+          id: userId,
+          email,
+          role: "user",
+          is_premium: false,
+          premium_expires_at: null,
+          kiwify_email: email,
+          kiwify_transaction_id: externalId ?? null,
+          updated_at: now.toISOString(),
+        });
 
       if (insertCancelError) {
-        console.error("[kiwify-webhook] Failed to insert canceled subscription:", insertCancelError.message);
-        // Não crítico — retornar sucesso pois o usuário não tem acesso de qualquer forma
+        console.error("[kiwify-webhook] Failed to insert public.users on cancel:", insertCancelError.message);
+        // Não crítico — o usuário não tem acesso de qualquer forma
       }
     }
 
-    console.log(`[kiwify-webhook] Premium canceled for user ${maskUserId(userId)}`);
+    console.log(`[kiwify-webhook] Premium canceled in public.users for ${maskUserId(userId)}`);
     return new Response(
       JSON.stringify({ ok: true, action: "canceled", email: maskEmail(email) }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
