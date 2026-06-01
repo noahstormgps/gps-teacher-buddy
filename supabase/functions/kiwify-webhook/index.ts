@@ -5,7 +5,7 @@
 // URL de configuração na Kiwify:
 // https://<SUPABASE_PROJECT_REF>.supabase.co/functions/v1/kiwify-webhook?token=<KIWIFY_WEBHOOK_TOKEN>
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 // ============================================================
 // CORS
