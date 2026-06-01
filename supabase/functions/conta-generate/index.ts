@@ -297,6 +297,135 @@ function getDisciplineHint(disciplina: string): string {
 }
 
 // ============================================================
+// SYSTEM PROMPTS DE EXERCÍCIOS POR BASE CURRICULAR (Blocos 5-9)
+// ============================================================
+
+const exercisesSystemPrompts: Record<string, string> = {
+  BNCC: `Você é um especialista em educação brasileira e elaboração de exercícios pedagógicos alinhados à BNCC Nacional. Gere exercícios de alta qualidade, práticos e prontos para uso em sala de aula. Responda SEMPRE em português brasileiro. Use formatação Markdown clara.`,
+  CRMG: `Você é um especialista em educação brasileira e elaboração de exercícios pedagógicos alinhados ao Currículo Referência de Minas Gerais (CRMG). O CRMG é derivado da BNCC com especificidades estaduais. Gere exercícios que respeitem as habilidades e competências do CRMG. Responda SEMPRE em português brasileiro. Use formatação Markdown clara.`,
+  PBH_EF: `Você é um especialista em educação brasileira e elaboração de exercícios pedagógicos alinhados às Proposições Curriculares da Rede Municipal de Belo Horizonte (RME/BH) para o Ensino Fundamental. Gere exercícios que respeitem a lógica pedagógica da rede municipal de BH. Responda SEMPRE em português brasileiro. Use formatação Markdown clara.`,
+  PBH_EJA_EM: `Você é um especialista em elaboração de exercícios para a EJA de Ensino Médio. Referencial: BNCC para o Ensino Médio + pedagogia da EJA. Conteúdo de nível médio com abordagem adulta — NÃO infantilizar. O estudante é trabalhador ou jovem com trajetória interrompida. Use exemplos do nível médio: funções, análise crítica de textos, reações químicas, geopolítica — com contexto real do adulto. Tom: adulto, direto, respeitoso. Responda SEMPRE em português brasileiro. Use formatação Markdown clara.`,
+  PBH_EJA_EF: `Você é um especialista em educação brasileira e elaboração de exercícios pedagógicos alinhados às Proposições Curriculares da Rede Municipal de Belo Horizonte (RME/BH) para a Educação de Jovens e Adultos (EJA). IMPORTANTE: mantenha tom adulto, respeitoso e não infantilizado. Os exercícios devem reconhecer a experiência de vida dos estudantes adultos. Responda SEMPRE em português brasileiro. Use formatação Markdown clara.`,
+};
+
+// Bloco 10 — Anti-alucinação para exercícios
+const exercisesAntiHallucination = `
+IMPORTANTE: Gere exercícios baseados no referencial curricular especificado. Se não tiver certeza sobre uma habilidade específica desse referencial, use a BNCC como base e adapte o contexto pedagógico de forma coerente. Nunca invente códigos de habilidades. Responda SEMPRE em português brasileiro.`;
+
+// Bloco 11 — Formatação matemática para exercícios
+const exercisesMathRules = `
+Regras para expressões matemáticas — FORMATO TEXTUAL SIMPLES OBRIGATÓRIO:
+- PROIBIDO usar qualquer sintaxe LaTeX. NUNCA use $...$, $$...$$, \\frac{}{}, \\sqrt{}, \\text{}, \\times, \\cdot, \\pi, \\int, \\sum ou qualquer comando com barra invertida.
+- Escreva toda a matemática em notação escolar simples, como aparece no caderno do aluno.
+- Multiplicação: use × (ex: 3 × 10 = 30)
+- Divisão: use ÷ (ex: 80 ÷ 8 = 10)
+- Raiz quadrada: use √ (ex: 5√3 cm, √75)
+- Pi: use π diretamente (ex: 36π cm²)
+- Potências: use superscript ² ³ ou escreva x^2 (ex: m², cm², x^2)
+- Frações: escreva como a/b (ex: 80/8 = 10)
+- Variáveis e fórmulas: escreva sem dólar (ex: L = 10, C = 30, A = C × L, P = 2(C + L))
+- Unidades: escreva junto ao número, sem LaTeX (ex: 80 m, 300 m², 5 cm)
+
+Regras obrigatórias para a VERSÃO DO PROFESSOR:
+Cada questão DEVE conter obrigatoriamente:
+1. Questão (enunciado completo)
+2. Gabarito (resposta correta)
+3. Resolução da Questão (passo a passo ou explicação detalhada)
+4. Justificativa Pedagógica (por que essa questão foi elaborada, qual habilidade desenvolve)
+
+Regras para a VERSÃO DO ALUNO:
+Cada questão deve conter:
+1. Título e instruções gerais
+2. Questões numeradas
+3. Espaço para resposta (quando fizer sentido)`;
+
+// ============================================================
+// CONSTRUÇÃO DO SYSTEM PROMPT DE EXERCÍCIOS
+// ============================================================
+
+function buildExercisesSystemPrompt(baseKey: string): string {
+  const base = exercisesSystemPrompts[baseKey] ?? exercisesSystemPrompts["BNCC"];
+  return base + exercisesAntiHallucination + exercisesMathRules;
+}
+
+// ============================================================
+// CONSTRUÇÃO DO USER PROMPT DE EXERCÍCIOS (Blocos 12-14)
+// ============================================================
+
+interface ExerciciosInput {
+  tipo: string;       // "Objetivas" | "Discursivas" | "Mistas"
+  quantidade: number; // 5 | 10 | 15
+  nivel: string;      // "Fácil" | "Médio" | "Difícil"
+  finalidade: string; // "Fixação" | "Avaliação" | "Revisão" | "Nivelamento" | "Simulado"
+  momento: string | null; // "Antes" | "Durante" | "Após" | null
+  saida: string;      // "Versão aluno" | "Versão professor" | "Ambas"
+  observacao?: string;
+}
+
+function buildExercisesUserPrompt(
+  disciplina: string,
+  serie: string,
+  tema: string,
+  baseCurricularLabel: string,
+  ex: ExerciciosInput
+): string {
+  // Bloco 12 — lógica de saída
+  let saidaInstrucao = "";
+  const saidaNorm = (ex.saida ?? "").toLowerCase();
+  if (saidaNorm.includes("ambas")) {
+    saidaInstrucao = "Gere AMBAS as versões: primeiro a Versão do Aluno completa, depois a Versão do Professor completa com Gabarito + Resolução da Questão + Justificativa Pedagógica para cada item.";
+  } else if (saidaNorm.includes("professor")) {
+    saidaInstrucao = "Gere apenas a Versão do Professor com Gabarito + Resolução da Questão + Justificativa Pedagógica para cada questão.";
+  } else {
+    saidaInstrucao = "Gere apenas a Versão do Aluno com título, instruções e espaço para resposta.";
+  }
+
+  // Bloco 13 — lógica de momento da aula
+  let momentoInstrucao = "";
+  if (ex.momento && ex.momento !== "nenhum") {
+    const fin = (ex.finalidade ?? "").toLowerCase();
+    const mom = (ex.momento ?? "").toLowerCase();
+    if (fin === "nivelamento" && mom === "antes") {
+      momentoInstrucao = "Gere um exercício diagnóstico curto, sem constrangimento, adequado ao início da aula — ideal para mapear o ponto de partida dos alunos.";
+    } else if (fin === "fixação" && mom === "durante") {
+      momentoInstrucao = "Gere uma prática guiada, com exemplos resolvidos e exercícios progressivos — adequada ao meio da aula.";
+    } else if (fin === "fixação" && mom === "após") {
+      momentoInstrucao = "Gere uma prática mais independente, sem gabarito imediato — adequada ao encerramento da aula.";
+    } else if (fin === "revisão" && mom === "antes") {
+      momentoInstrucao = "Gere uma retomada rápida dos conteúdos anteriores, com questões curtas e objetivas — adequada ao início da aula.";
+    } else {
+      momentoInstrucao = `Gere exercícios de ${ex.finalidade.toLowerCase()} adequados ao momento de ${ex.momento.toLowerCase()} da aula.`;
+    }
+  }
+
+  // Bloco 14 — user prompt dinâmico
+  let prompt = `Elabore exercícios para a seguinte aula:
+
+**Referencial Curricular:** ${baseCurricularLabel}
+**Disciplina:** ${disciplina}
+**Série/Ano:** ${serie}
+**Tema:** ${tema}
+**Tipo de questões:** ${ex.tipo}
+**Quantidade:** ${ex.quantidade} questões
+**Nível de dificuldade:** ${ex.nivel}
+**Finalidade:** ${ex.finalidade}`;
+
+  if (ex.momento && ex.momento !== "nenhum") {
+    prompt += `\n**Momento da Aula:** ${ex.momento}`;
+  }
+  if (momentoInstrucao) {
+    prompt += `\n**Orientação pedagógica:** ${momentoInstrucao}`;
+  }
+  if (ex.observacao && ex.observacao.trim()) {
+    prompt += `\n**Observação:** ${ex.observacao.trim()}`;
+  }
+
+  prompt += `\n\n${saidaInstrucao}`;
+
+  return prompt;
+}
+
+// ============================================================
 // HANDLER PRINCIPAL
 // ============================================================
 
@@ -345,6 +474,7 @@ Deno.serve(async (req) => {
       nivelEJA = "EJA_EF",
       cidadeEstado,
       perfilTurma,
+      exercicios,  // objeto opcional — quando presente, ativa segunda chamada Gemini
     } = input;
 
     // Validações básicas
@@ -661,6 +791,119 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // ============================================================
+    // SEGUNDA CHAMADA GEMINI — EXERCÍCIOS (condicional)
+    // Ativada APENAS quando o frontend envia o objeto `exercicios`.
+    // Falha isolada: NUNCA cancela o plano já gerado.
+    // ============================================================
+
+    if (exercicios && typeof exercicios === "object") {
+      try {
+        const exSystemPrompt = buildExercisesSystemPrompt(baseKey);
+        const exUserPrompt = buildExercisesUserPrompt(
+          disciplina,
+          serie,
+          tema,
+          baseCurricularLabel,
+          exercicios as ExerciciosInput
+        );
+
+        const exResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: exSystemPrompt }] },
+              contents: [{ role: "user", parts: [{ text: exUserPrompt }] }],
+              generationConfig: {
+                maxOutputTokens: 8192,
+                temperature: 0.7,
+              },
+            }),
+          }
+        );
+
+        // Retry único para 503/429 na segunda chamada
+        let finalExResponse = exResponse;
+        if (!exResponse.ok && (exResponse.status === 503 || exResponse.status === 429)) {
+          console.error(`[conta-generate] Exercises Gemini unavailable status=${exResponse.status}, retrying once`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          finalExResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: exSystemPrompt }] },
+                contents: [{ role: "user", parts: [{ text: exUserPrompt }] }],
+                generationConfig: {
+                  maxOutputTokens: 8192,
+                  temperature: 0.7,
+                },
+              }),
+            }
+          );
+        }
+
+        if (!finalExResponse.ok) {
+          const exStatus = finalExResponse.status;
+          const exErr = await finalExResponse.text();
+          console.error(`[conta-generate] Exercises Gemini error status=${exStatus}:`, exErr);
+          // Falha parcial — plano preservado, aviso amigável
+          content = content + "\n\n---\n\n## Atividades com Gabarito\n\n⚠️ Os exercícios não puderam ser gerados neste momento. Seu plano de aula está completo e disponível acima. Tente gerar os exercícios novamente em alguns instantes.";
+        } else {
+          const exData = await finalExResponse.json();
+          const exFinishReason = exData?.candidates?.[0]?.finishReason ?? "N/A";
+          let exContent = extractText(exData);
+
+          // Retry anti-RECITATION para exercícios
+          if (!exContent && exFinishReason === "RECITATION") {
+            console.error("[conta-generate] Exercises RECITATION detected, retrying with anti-recitation prefix");
+            const exAntiRecPrefix =
+              "IMPORTANTE: Gere exercícios 100% originais e autorais. " +
+              "Não reproduza enunciados de livros didáticos, provas ou materiais existentes. " +
+              "Crie situações-problema, contextos e questões completamente originais.\n\n";
+            const exRetryResponse = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  system_instruction: { parts: [{ text: exSystemPrompt }] },
+                  contents: [{ role: "user", parts: [{ text: exAntiRecPrefix + exUserPrompt }] }],
+                  generationConfig: {
+                    maxOutputTokens: 8192,
+                    temperature: 0.9,
+                  },
+                }),
+              }
+            );
+            if (exRetryResponse.ok) {
+              const exRetryData = await exRetryResponse.json();
+              exContent = extractText(exRetryData);
+            }
+          }
+
+          if (exContent) {
+            const cleanedEx = cleanMathFormatting(exContent);
+            content = content + "\n\n---\n\n# Atividades com Gabarito\n\n" + cleanedEx;
+          } else {
+            console.error(`[conta-generate] Exercises returned no content, finishReason=${exFinishReason}`);
+            content = content + "\n\n---\n\n## Atividades com Gabarito\n\n⚠️ Os exercícios não puderam ser gerados neste momento. Seu plano de aula está completo e disponível acima. Tente gerar os exercícios novamente em alguns instantes.";
+          }
+        }
+      } catch (exErr) {
+        // Qualquer erro inesperado na segunda chamada — plano preservado
+        console.error("[conta-generate] Exercises unexpected error:", exErr);
+        content = content + "\n\n---\n\n## Atividades com Gabarito\n\n⚠️ Os exercícios não puderam ser gerados neste momento. Seu plano de aula está completo e disponível acima. Tente gerar os exercícios novamente em alguns instantes.";
+      }
+    }
+
+    // ============================================================
+    // RESPOSTA FINAL
+    // ============================================================
 
     const cleanedContent = cleanMathFormatting(content);
     const title = `Plano de Aula: ${tema} - ${disciplina} (${serie})`;
