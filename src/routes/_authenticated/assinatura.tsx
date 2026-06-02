@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Check, Sparkles } from "lucide-react";
+import { Crown, Check, Sparkles, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,18 +28,36 @@ const premiumFeatures = [
   "Atualizações exclusivas",
 ];
 
+const KIWIFY_CHECKOUT_URL = "https://pay.kiwify.com.br/suOyjFO";
+
 function SubscriptionPage() {
   const { user } = useAuth();
-  const { data: subscription, isLoading } = useQuery({
-    queryKey: ["subscription", user?.id],
+
+  const { data: userRecord, isLoading } = useQuery({
+    queryKey: ["user_premium", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("subscriptions").select("*").eq("user_id", user!.id).maybeSingle();
+      const { data } = await supabase
+        .from("users")
+        .select("is_premium, premium_expires_at")
+        .eq("id", user!.id)
+        .maybeSingle();
       return data;
     },
     enabled: !!user,
   });
 
-  const isPremium = subscription?.plan === "premium" && subscription?.status === "active";
+  const isPremium =
+    !!userRecord?.is_premium &&
+    (userRecord?.premium_expires_at == null ||
+      new Date(userRecord.premium_expires_at) > new Date());
+
+  const expiresAt = userRecord?.premium_expires_at
+    ? new Date(userRecord.premium_expires_at).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -48,23 +66,28 @@ function SubscriptionPage() {
           <Sparkles className="h-3.5 w-3.5 text-premium" /> Sua assinatura
         </div>
         <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight md:text-5xl">
-          Escolha o plano ideal para você
+          {isPremium ? "Seu plano Premium está ativo" : "Escolha o plano ideal para você"}
         </h1>
         <p className="mt-3 text-muted-foreground">
-          Comece grátis ou desbloqueie tudo com o Premium.
+          {isPremium
+            ? "Todos os métodos estão desbloqueados para você."
+            : "Comece grátis ou desbloqueie tudo com o Premium."}
         </p>
       </div>
 
-      {/* Status */}
-      {!isLoading && subscription && (
-        <div className="mt-10 mx-auto max-w-md rounded-2xl border border-border bg-gradient-card p-5 text-center shadow-soft">
-          <p className="text-sm text-muted-foreground">Status atual</p>
-          <p className="mt-1 font-display text-xl font-semibold capitalize">
-            Plano {subscription.plan} · {subscription.status}
+      {/* Status Premium ativo */}
+      {!isLoading && isPremium && (
+        <div className="mt-10 mx-auto max-w-md rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center shadow-soft">
+          <div className="flex items-center justify-center gap-2 text-emerald-700">
+            <ShieldCheck className="h-5 w-5" />
+            <p className="font-semibold text-lg">Premium ativo</p>
+          </div>
+          <p className="mt-2 text-sm text-emerald-700/80">
+            Todos os métodos do GPS Docente estão desbloqueados.
           </p>
-          {subscription.expires_at && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Renova em {new Date(subscription.expires_at).toLocaleDateString("pt-BR")}
+          {expiresAt && (
+            <p className="mt-2 text-xs text-emerald-600/70">
+              Válido até: {expiresAt}
             </p>
           )}
         </div>
@@ -76,7 +99,9 @@ function SubscriptionPage() {
         <div className="rounded-3xl border border-border bg-gradient-card p-8 shadow-soft">
           <h3 className="font-display text-2xl font-semibold">Gratuito</h3>
           <p className="mt-1 text-sm text-muted-foreground">Para conhecer a plataforma</p>
-          <p className="mt-6 font-display text-4xl font-semibold">R$ 0<span className="text-base text-muted-foreground font-normal">/mês</span></p>
+          <p className="mt-6 font-display text-4xl font-semibold">
+            R$ 0<span className="text-base text-muted-foreground font-normal">/mês</span>
+          </p>
           <ul className="mt-6 space-y-3 text-sm">
             {freeFeatures.map((f) => (
               <li key={f} className="flex items-start gap-2">
@@ -110,18 +135,27 @@ function SubscriptionPage() {
                 </li>
               ))}
             </ul>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="mt-8 w-full shadow-premium"
-              disabled={isPremium}
-              onClick={() => {
-                // TODO: integrar com checkout da Kiwify
-                window.alert("Integração com Kiwify em breve! Em produção, este botão abre o checkout.");
-              }}
-            >
-              {isPremium ? "Você já é Premium" : "Assinar Premium"}
-            </Button>
+            {isPremium ? (
+              <Button
+                size="lg"
+                variant="secondary"
+                className="mt-8 w-full shadow-premium"
+                disabled
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" /> Você já é Premium
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                variant="secondary"
+                className="mt-8 w-full shadow-premium"
+                onClick={() => {
+                  window.open(KIWIFY_CHECKOUT_URL, "_blank", "noopener,noreferrer");
+                }}
+              >
+                Assinar Premium
+              </Button>
+            )}
           </div>
         </div>
       </div>

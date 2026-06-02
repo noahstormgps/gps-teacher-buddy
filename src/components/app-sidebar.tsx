@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   LayoutDashboard,
@@ -12,8 +13,10 @@ import {
   X,
   Compass,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 // ─── Definição dos itens de navegação ───────────────────────────────────────
@@ -72,6 +75,24 @@ const NAV_ITEMS = [
 export function AppSidebar() {
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { data: userRecord } = useQuery({
+    queryKey: ["user_premium", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("is_premium, premium_expires_at")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const isPremium =
+    !!userRecord?.is_premium &&
+    (userRecord?.premium_expires_at == null ||
+      new Date(userRecord.premium_expires_at) > new Date());
 
   const displayName = (() => {
     const meta = (user as any)?.user_metadata;
@@ -161,30 +182,54 @@ export function AppSidebar() {
 
         {/* ── Rodapé: Premium CTA + Perfil ── */}
         <div className="border-t border-border/60 px-3 py-3 space-y-2">
-          {/* CTA Premium */}
-          <Link
-            to="/assinatura"
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              "flex items-center gap-2.5 rounded-xl px-3.5 py-3",
-              "bg-gradient-to-r from-[oklch(0.82_0.14_80)] to-[oklch(0.72_0.16_60)]",
-              "shadow-[0_4px_16px_-4px_oklch(0.72_0.16_60/0.45)]",
-              "border border-[oklch(0.72_0.16_60/0.2)]",
-              "transition-all duration-150 hover:shadow-[0_6px_20px_-4px_oklch(0.72_0.16_60/0.55)] hover:scale-[1.01]",
-            )}
-          >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/30">
-              <Sparkles className="h-3.5 w-3.5 text-amber-900" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-amber-950 leading-none tracking-wide">
-                Acesso Premium
-              </p>
-              <p className="text-[10px] text-amber-800/75 mt-0.5 truncate">
-                Todos os métodos desbloqueados
-              </p>
-            </div>
-          </Link>
+          {/* CTA Premium — condicional ao status real do usuário */}
+          {isPremium ? (
+            <Link
+              to="/assinatura"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3.5 py-3",
+                "bg-gradient-to-r from-[oklch(0.82_0.14_80)] to-[oklch(0.72_0.16_60)]",
+                "shadow-[0_4px_16px_-4px_oklch(0.72_0.16_60/0.45)]",
+                "border border-[oklch(0.72_0.16_60/0.2)]",
+                "transition-all duration-150 hover:shadow-[0_6px_20px_-4px_oklch(0.72_0.16_60/0.55)] hover:scale-[1.01]",
+              )}
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/30">
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-900" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-amber-950 leading-none tracking-wide">
+                  Acesso Premium
+                </p>
+                <p className="text-[10px] text-amber-800/75 mt-0.5 truncate">
+                  Todos os métodos desbloqueados
+                </p>
+              </div>
+            </Link>
+          ) : (
+            <Link
+              to="/assinatura"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3.5 py-3",
+                "bg-muted/60 border border-border/60",
+                "transition-all duration-150 hover:bg-muted hover:scale-[1.01]",
+              )}
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground leading-none tracking-wide">
+                  Assinar Premium
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  Desbloqueie todos os métodos
+                </p>
+              </div>
+            </Link>
+          )}
 
           {/* Perfil do professor */}
           <div className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-muted/50 transition-colors group">

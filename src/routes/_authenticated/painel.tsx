@@ -68,16 +68,23 @@ function DashboardPage() {
     enabled: !!user,
   });
 
-  const { data: subscription } = useQuery({
-    queryKey: ["subscription", user?.id],
+  const { data: userRecord } = useQuery({
+    queryKey: ["user_premium", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("subscriptions").select("*").eq("user_id", user!.id).maybeSingle();
+      const { data } = await supabase
+        .from("users")
+        .select("is_premium, premium_expires_at")
+        .eq("id", user!.id)
+        .maybeSingle();
       return data;
     },
     enabled: !!user,
   });
 
-  const isPremium = subscription?.plan === "premium" && subscription?.status === "active";
+  const isPremium =
+    !!userRecord?.is_premium &&
+    (userRecord?.premium_expires_at == null ||
+      new Date(userRecord.premium_expires_at) > new Date());
   const rawName = profile?.full_name ?? (user?.email ? user.email.split("@")[0] : "");
   const firstName = rawName.split(" ")[0];
 
