@@ -66,7 +66,6 @@ const NAV_ITEMS = [
     color: "text-violet-500",
     activeBg: "bg-violet-50",
     activeBorder: "border-l-violet-500",
-    comingSoon: true,
   },
 ] as const;
 
