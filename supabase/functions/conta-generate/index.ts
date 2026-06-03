@@ -908,6 +908,21 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
     const cleanedContent = cleanMathFormatting(content);
     const title = `Plano de Aula: ${tema} - ${disciplina} (${serie})`;
 
+    // ── SALVAR GERAÇÃO NA BIBLIOTECA (fire-and-forget) ────────────────────────
+    // Nunca bloqueia nem cancela a resposta em caso de falha.
+    try {
+      const { error: saveErr } = await supabaseClient
+        .from("generations")
+        .insert({ user_id: user.id, method: "CONTA", title, content: cleanedContent });
+      if (saveErr) {
+        console.error("[conta-generate] Failed to save generation:", saveErr.message);
+      } else {
+        console.log(`[conta-generate] Generation saved for user=${user.id}`);
+      }
+    } catch (saveEx) {
+      console.error("[conta-generate] Unexpected error saving generation:", saveEx);
+    }
+
     return new Response(
       JSON.stringify({ success: true, error: null, content: cleanedContent, title, userPrompt }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -555,6 +555,20 @@ Deno.serve(async (req) => {
       `[sala-generate] Success for user=${user.id}, tipoConflito="${tipoConflito}", isPremium=${isPremium}`,
     );
 
+    // ── SALVAR GERAÇÃO NA BIBLIOTECA (fire-and-forget) ────────────────────────
+    try {
+      const { error: saveErr } = await supabaseClient
+        .from("generations")
+        .insert({ user_id: user.id, method: "SALA", title, content });
+      if (saveErr) {
+        console.error("[sala-generate] Failed to save generation:", saveErr.message);
+      } else {
+        console.log(`[sala-generate] Generation saved for user=${user.id}`);
+      }
+    } catch (saveEx) {
+      console.error("[sala-generate] Unexpected error saving generation:", saveEx);
+    }
+
     return new Response(
       JSON.stringify({ success: true, error: null, content, title }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

@@ -474,6 +474,21 @@ Deno.serve(async (req) => {
     console.log(
       `[rapido-generate] Success for user=${user.id}, tipoDocumento="${tipoDocumento}", finishReason=${firstFinishReason}`,
     );
+
+    // ── SALVAR GERAÇÃO NA BIBLIOTECA (fire-and-forget) ────────────────────────
+    try {
+      const { error: saveErr } = await supabaseClient
+        .from("generations")
+        .insert({ user_id: user.id, method: "RAPIDO", title: tipoDocumento, content });
+      if (saveErr) {
+        console.error("[rapido-generate] Failed to save generation:", saveErr.message);
+      } else {
+        console.log(`[rapido-generate] Generation saved for user=${user.id}`);
+      }
+    } catch (saveEx) {
+      console.error("[rapido-generate] Unexpected error saving generation:", saveEx);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
