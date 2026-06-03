@@ -913,7 +913,7 @@ Orientação específica para ${disciplina}: ${getDisciplineHint(disciplina)}`;
     try {
       const { error: saveErr } = await supabaseClient
         .from("generations")
-        .insert({ user_id: user.id, method: "CONTA", title, content: cleanedContent });
+        .insert({ user_id: user.id, module: "CONTA", title, output_content: cleanedContent });
       if (saveErr) {
         console.error("[conta-generate] Failed to save generation:", saveErr.message);
       } else {

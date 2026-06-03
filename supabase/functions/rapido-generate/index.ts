@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
     try {
       const { error: saveErr } = await supabaseClient
         .from("generations")
-        .insert({ user_id: user.id, method: "RAPIDO", title: tipoDocumento, content });
+        .insert({ user_id: user.id, module: "RAPIDO", title: tipoDocumento, output_content: content });
       if (saveErr) {
         console.error("[rapido-generate] Failed to save generation:", saveErr.message);
       } else {

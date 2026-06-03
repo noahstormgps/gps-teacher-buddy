@@ -26,9 +26,9 @@ type FilterOption = "TODOS" | Method;
 
 interface Generation {
   id: string;
-  method: Method;
+  module: Method;
   title: string;
-  content: string;
+  output_content: string;
   created_at: string;
 }
 
@@ -80,7 +80,7 @@ function BibliotecaPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("generations")
-        .select("id, method, title, content, created_at")
+        .select("id, module, title, output_content, created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw new Error(error.message);
@@ -90,20 +90,20 @@ function BibliotecaPage() {
 
   // ── Filtro ─────────────────────────────────────────────────────────────
   const filtered = generations?.filter(
-    (g) => filter === "TODOS" || g.method === filter
+    (g) => filter === "TODOS" || g.module === filter
   ) ?? [];
 
   // ── Copiar conteúdo ────────────────────────────────────────────────────
   async function handleCopy() {
     if (!selected) return;
-    await navigator.clipboard.writeText(selected.content);
+    await navigator.clipboard.writeText(selected.output_content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   // ── VISUALIZADOR ──────────────────────────────────────────────────────
   if (selected) {
-    const cfg = METHOD_CONFIG[selected.method];
+    const cfg = METHOD_CONFIG[selected.module];
     const Icon = cfg.icon;
     return (
       <div className="min-h-screen bg-gray-50">
@@ -126,6 +126,7 @@ function BibliotecaPage() {
             <Icon className="w-3 h-3" />
             {cfg.label}
           </Badge>
+
           <Button
             variant="outline"
             size="sm"
@@ -151,7 +152,7 @@ function BibliotecaPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <div className="prose prose-sm max-w-none text-gray-800">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {selected.content}
+                {selected.output_content}
               </ReactMarkdown>
             </div>
           </div>
@@ -239,7 +240,7 @@ function BibliotecaPage() {
         {!isLoading && !error && filtered.length > 0 && (
           <div className="space-y-3">
             {filtered.map((gen) => {
-              const cfg = METHOD_CONFIG[gen.method];
+              const cfg = METHOD_CONFIG[gen.module];
               const Icon = cfg.icon;
               return (
                 <button

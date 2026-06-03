@@ -559,7 +559,7 @@ Deno.serve(async (req) => {
     try {
       const { error: saveErr } = await supabaseClient
         .from("generations")
-        .insert({ user_id: user.id, method: "SALA", title, content });
+        .insert({ user_id: user.id, module: "SALA", title, output_content: content });
       if (saveErr) {
         console.error("[sala-generate] Failed to save generation:", saveErr.message);
       } else {
