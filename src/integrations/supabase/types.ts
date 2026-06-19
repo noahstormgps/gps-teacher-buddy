@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      generations: {
+        Row: {
+          created_at: string
+          id: number
+          input_data: Json | null
+          is_saved: boolean | null
+          module: string
+          output_content: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          input_data?: Json | null
+          is_saved?: boolean | null
+          module: string
+          output_content: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          input_data?: Json | null
+          is_saved?: boolean | null
+          module?: string
+          output_content?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
